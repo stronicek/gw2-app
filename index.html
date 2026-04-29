@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>GW2 | Správce Inventáře</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gw2-red: #b21e1e;
+            --gw2-dark: #1a1a1a;
+            --bg-light: #f4f4f4;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: var(--bg-light);
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Hlavička inspirovaná herním webem */
+        header {
+            background-color: var(--gw2-dark);
+            border-top: 5px solid var(--gw2-red);
+            color: white;
+            text-align: center;
+            padding: 40px 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            margin: 0;
+            letter-spacing: 1.5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Tmavá navigační lišta */
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #222;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            color: #ccc;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            padding: 15px 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        nav button:hover, nav button.active {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-bottom: 3px solid var(--gw2-red);
+        }
+
+        /* Hlavní kontejner aplikace */
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-radius: 8px;
+        }
+
+        h2 {
+            font-family: 'Cinzel', serif;
+            color: var(--gw2-dark);
+            border-bottom: 2px solid var(--gw2-red);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        /* Formuláře */
+        label { font-weight: 600; color: #555; }
+        select, input[type="text"] {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 1rem;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 100%;
+            max-width: 400px;
+            margin-top: 8px;
+            transition: border-color 0.2s;
+        }
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--gw2-red);
+        }
+
+        /* Moderní tlačítka */
+        .btn-action {
+            background-color: var(--gw2-red);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-action:hover { background-color: #8a1515; }
+        .btn-action:active { transform: scale(0.98); }
+
+        /* Karty s předměty */
+        .item {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        .item img {
+            width: 56px;
+            height: 56px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+
+        /* Barvy rarity jako levý proužek */
+        .junk { border-left: 6px solid #aaa; }
+        .material { border-left: 6px solid #4caf50; }
+        .rare { border-left: 6px solid #fdd835; }
+        .ascended { border-left: 6px solid #e91e63; }
+        .legendary { border-left: 6px solid #9c27b0; }
+
+        /* Obsah karty */
+        .item-content { flex: 1; }
+        .item-title { font-weight: 600; font-size: 1.15rem; color: #111; margin-bottom: 2px; }
+        .item-meta { font-size: 0.85rem; color: #777; margin-bottom: 8px; }
+        
+        a.wiki-link {
+            color: var(--gw2-red);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+        a.wiki-link:hover { text-decoration: underline; }
+
+        /* Blok pro přeložené shrnutí */
+        .wiki-summary {
+            margin-top: 10px;
+            font-size: 0.95rem;
+            color: #333;
+            background: #fff8f8;
+            border-left: 3px solid var(--gw2-red);
+            padding: 12px;
+            border-radius: 0 4px 4px 0;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .success-text { color: #4caf50; font-weight: bold; display: none; margin-left: 10px; }
+        
+        /* Přepínání stránek */
+        #view-inventory, #view-settings { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Guild Wars 2</h1>
+    </header>
+
+    <nav>
+        <button id="nav-inventory" onclick="switchView('inventory')">Inventář</button>
+        <button id="nav-settings" onclick="switchView('settings')">Nastavení</button>
+    </nav>
+
+    <div class="container">
+        <div id="view-inventory">
+            <h2>Správce Postav</h2>
+            <label for="charSelect">Vyberte postavu pro zobrazení batohů:</label><br>
+            <select id="charSelect" onchange="loadCharacterInventory()">
+                <option value="">-- Zvolte postavu --</option>
+            </select>
+            
+            <div id="results" style="margin-top: 30px;">
+                <p style="color: #888; font-style: italic;">Inventář se zobrazí zde...</p>
+            </div>
+        </div>
+
+        <div id="view-settings">
+            <h2>Nastavení Aplikace</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="apiKey">GW2 API Klíč:</label><br>
+                <input type="text" id="apiKey" placeholder="Vložte svůj vygenerovaný klíč...">
+                <span id="saveStatusGW2" class="success-text">✔ Bezpečně uloženo</span>
+            </div>
+            <p><small style="color: #666;">Data se ukládají lokálně ve vašem prohlížeči. Přístupový klíč by měl mít oprávnění <em>account</em>, <em>characters</em> a <em>inventories</em>.</small></p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
