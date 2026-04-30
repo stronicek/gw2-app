@@ -7,20 +7,25 @@ window.onload = () => {
     }
 };
 
-// 2. Logika pro Levé Menu
+// 2. Logika pro Levé Menu a přepínání stránek
 function toggleMenu() {
     const sidebar = document.getElementById('sidebar');
     sidebar.classList.toggle('collapsed');
 }
 
-function switchView(viewId, btnElement) {
-    // Skryje všechny stránky a ukáže vybranou
+function switchView(viewId) {
+    // A. Skryje všechny hlavní sekce a ukáže pouze tu vybranou (home, inventory, settings)
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + viewId).classList.add('active');
     
-    // Zvýrazní kliknuté tlačítko v menu
+    // B. Zruší zvýraznění u všech tlačítek v levém menu
     document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
-    btnElement.classList.add('active');
+    
+    // C. Najde správné tlačítko v menu podle ID a zvýrazní ho (i když jsme klikli na dlaždici)
+    const activeNavBtn = document.getElementById('nav-' + viewId);
+    if(activeNavBtn) {
+        activeNavBtn.classList.add('active');
+    }
 }
 
 // 3. Logika pro Nastavení (Uložení / Smazání klíče)
