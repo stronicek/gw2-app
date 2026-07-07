@@ -1,4 +1,3 @@
-// Globální proměnná pro uchování načtených dat z API
 let currentInventoryData = [];
 
 window.onload = () => {
@@ -60,12 +59,15 @@ async function loadCharacterList(apiKey) {
     }
 }
 
-// Stáhne data a uloží je do paměti
 async function loadCharacterInventory() {
     const apiKey = localStorage.getItem('gw2_api_key');
     const selectedChar = document.getElementById('charSelect').value;
     const resultsDiv = document.getElementById('results');
     const controlsDiv = document.getElementById('inventory-controls');
+
+    // Vyčistíme filtry, aby nás neblokovaly při změně postavy
+    document.getElementById('searchInput').value = '';
+    document.getElementById('rarityFilter').value = '';
 
     if (!selectedChar) {
         controlsDiv.style.display = 'none';
@@ -76,12 +78,16 @@ async function loadCharacterInventory() {
     resultsDiv.innerHTML = `<em>Načítám batohy pro postavu <strong>${selectedChar}</strong>...</em>`;
 
     try {
+        // 1. Získání struktury batohů
         const invResponse = await fetch(`https://api.guildwars2.com/v2/characters/${selectedChar}/inventory?access_token=${apiKey}`);
+        if (!invResponse.ok) throw new Error("Chyba při stahování inventáře.");
+        
         const inventoryData = await invResponse.json();
-
         let allItems = [];
+        
         inventoryData.bags.forEach(bag => {
             if (bag && bag.inventory) {
+                // Odstraníme prázdné sloty (null)
                 const validItems = bag.inventory.filter(item => item !== null);
                 allItems.push(...validItems);
             }
@@ -92,18 +98,21 @@ async function loadCharacterInventory() {
             return;
         }
 
+        // 2. Extrakce unikátních ID (GW2 API povoluje max 200 na jeden dotaz)
         const uniqueIds = [...new Set(allItems.map(item => item.id))].slice(0, 200);
         const idsString = uniqueIds.join(',');
         
+        // 3. Získání detailů k předmětům (názvy, ikony, rarity)
         const itemsResponse = await fetch(`https://api.guildwars2.com/v2/items?ids=${idsString}`);
-        const itemDetailsArray = await itemsResponse.json();
+        if (!itemsResponse.ok) throw new Error("Chyba při načítání detailů předmětů.");
         
+        const itemDetailsArray = await itemsResponse.json();
         const itemDetailsMap = {};
         itemDetailsArray.forEach(detail => {
             itemDetailsMap[detail.id] = detail;
         });
 
-        // Vyčistíme stará data a uložíme nová, rozšířená o detaily
+        // 4. Uložení propojených dat do hlavní paměti
         currentInventoryData = [];
         allItems.forEach((itemData) => {
             const details = itemDetailsMap[itemData.id];
@@ -119,24 +128,32 @@ async function loadCharacterInventory() {
             }
         });
 
-        controlsDiv.style.display = 'flex'; // Zobrazí filtry
-        renderInventory(); // Vykreslí seznam
+        if (currentInventoryData.length === 0) {
+             throw new Error("Předměty se nepodařilo spárovat s databází API.");
+        }
+
+        // 5. Zobrazení panelu a vykreslení seznamu
+        controlsDiv.style.display = 'flex';
+        renderInventory();
 
     } catch (error) {
         console.error(error);
-        resultsDiv.innerHTML = `<span style="color:red">Došlo k chybě připojení.</span>`;
+        resultsDiv.innerHTML = `<span style="color:red">Došlo k chybě: ${error.message}</span>`;
     }
 }
 
-// Vykreslování dat na základě vybraných filtrů
 function renderInventory() {
     const resultsDiv = document.getElementById('results');
-    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
-    const rarityFilter = document.getElementById('rarityFilter').value;
+    
+    // Zabezpečené získání textu pro vyhledávání (trim odstraní mezery z okrajů)
+    const searchInput = document.getElementById('searchInput');
+    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    
+    const raritySelect = document.getElementById('rarityFilter');
+    const rarityFilter = raritySelect ? raritySelect.value : "";
     
     resultsDiv.innerHTML = '';
     
-    // Vyfiltrování aktuálních dat
     const filteredItems = currentInventoryData.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery);
         const matchesRarity = rarityFilter === "" || item.rarity === rarityFilter;
@@ -144,11 +161,10 @@ function renderInventory() {
     });
 
     if (filteredItems.length === 0) {
-        resultsDiv.innerHTML = "<p style='color: #666;'>Žádné předměty neodpovídají filtru.</p>";
+        resultsDiv.innerHTML = "<p style='color: #666; padding: 20px 0;'>Žádné předměty neodpovídají filtru.</p>";
         return;
     }
 
-    // Vykreslení výsledků
     filteredItems.forEach((item, index) => {
         const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
         
@@ -182,15 +198,13 @@ function renderInventory() {
     });
 }
 
-// Vygenerování a stažení dat ve formátu CSV
 function exportToCSV() {
     if (currentInventoryData.length === 0) {
         alert("Není co exportovat.");
         return;
     }
 
-    // Exportujeme jen to, co má uživatel aktuálně vyfiltrované na obrazovce
-    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    const searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
     const rarityFilter = document.getElementById('rarityFilter').value;
     
     const filteredItems = currentInventoryData.filter(item => {
@@ -198,20 +212,14 @@ function exportToCSV() {
                (rarityFilter === "" || item.rarity === rarityFilter);
     });
 
-    // Vytvoření hlavičky
     let csvContent = "Název,Typ,Rarita,Množství\n";
-    
     filteredItems.forEach(item => {
-        // Zpracování názvu pro případ, že obsahuje čárku
         let name = item.name.replace(/"/g, '""');
         csvContent += `"${name}","${item.type}","${item.rarity}",${item.count}\n`;
     });
 
-    // Zápis do UTF-8 souboru, aby se správně četly háčky a čárky (BOM marker)
     const bom = "\uFEFF";
     const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
-    
-    // Virtuální kliknutí pro stažení
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -223,7 +231,6 @@ function exportToCSV() {
     document.body.removeChild(link);
 }
 
-// Stažení z Wiki
 async function getWikiSummary(encodedItemName, elementId) {
     const summaryDiv = document.getElementById(elementId);
     summaryDiv.style.display = "block";
