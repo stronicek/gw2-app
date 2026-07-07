@@ -1,4 +1,6 @@
-// 1. Spuštění po načtení stránky
+// Globální proměnná pro uchování načtených dat z API
+let currentInventoryData = [];
+
 window.onload = () => {
     const savedKey = localStorage.getItem('gw2_api_key');
     if (savedKey) {
@@ -7,85 +9,70 @@ window.onload = () => {
     }
 };
 
-// 2. Logika pro Levé Menu a přepínání stránek
 function toggleMenu() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('collapsed');
+    document.getElementById('sidebar').classList.toggle('collapsed');
 }
 
 function switchView(viewId) {
-    // A. Skryje všechny hlavní sekce a ukáže pouze tu vybranou (home, inventory, settings)
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + viewId).classList.add('active');
-    
-    // B. Zruší zvýraznění u všech tlačítek v levém menu
     document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
     
-    // C. Najde správné tlačítko v menu podle ID a zvýrazní ho (i když jsme klikli na dlaždici)
     const activeNavBtn = document.getElementById('nav-' + viewId);
-    if(activeNavBtn) {
-        activeNavBtn.classList.add('active');
-    }
+    if(activeNavBtn) activeNavBtn.classList.add('active');
 }
 
-// 3. Logika pro Nastavení (Uložení / Smazání klíče)
 function saveKey() {
     const newKey = document.getElementById('apiKey').value.trim();
-    if (newKey === "") {
-        alert("Před uložením vložte klíč.");
-        return;
-    }
+    if (newKey === "") return alert("Před uložením vložte klíč.");
     
     localStorage.setItem('gw2_api_key', newKey);
-    
-    // Zobrazení potvrzovací fajfky
     const statusMsg = document.getElementById('saveStatus');
     statusMsg.style.display = 'inline';
     setTimeout(() => { statusMsg.style.display = 'none'; }, 2000);
-    
-    // Automatické načtení postav do inventáře
     loadCharacterList(newKey);
 }
 
 function deleteKey() {
-    if (confirm("Opravdu chceš smazat API klíč? Budeš ho muset zadat znovu.")) {
+    if (confirm("Opravdu chceš smazat API klíč?")) {
         localStorage.removeItem('gw2_api_key');
         document.getElementById('apiKey').value = '';
         document.getElementById('charSelect').innerHTML = '<option value="">-- Nejdříve uložte API klíč --</option>';
-        document.getElementById('results').innerHTML = '<p style="color: #666;">Vyber postavu z rozbalovacího menu pro načtení batohů.</p>';
+        document.getElementById('results').innerHTML = '<p style="color: #666;">Vyber postavu z menu pro načtení batohů.</p>';
+        document.getElementById('inventory-controls').style.display = 'none';
         alert('Klíč byl smazán.');
     }
 }
 
-// 4. Stahování dat z GW2 API
 async function loadCharacterList(apiKey) {
     const select = document.getElementById('charSelect');
     try {
         const response = await fetch(`https://api.guildwars2.com/v2/characters?access_token=${apiKey}`);
         if (!response.ok) throw new Error("Chyba API klíče");
-        
         const characters = await response.json();
+        
         select.innerHTML = '<option value="">-- Zvolte postavu --</option>';
         characters.forEach(charName => {
             select.innerHTML += `<option value="${charName}">${charName}</option>`;
         });
     } catch (error) {
-        console.error(error);
         select.innerHTML = '<option value="">-- Chybný klíč --</option>';
     }
 }
 
+// Stáhne data a uloží je do paměti
 async function loadCharacterInventory() {
     const apiKey = localStorage.getItem('gw2_api_key');
     const selectedChar = document.getElementById('charSelect').value;
     const resultsDiv = document.getElementById('results');
+    const controlsDiv = document.getElementById('inventory-controls');
 
-    if (!selectedChar) return;
-    if (!apiKey) {
-        alert("Chybí GW2 API klíč! Jdi do Nastavení.");
+    if (!selectedChar) {
+        controlsDiv.style.display = 'none';
         return;
     }
-
+    
+    controlsDiv.style.display = 'none';
     resultsDiv.innerHTML = `<em>Načítám batohy pro postavu <strong>${selectedChar}</strong>...</em>`;
 
     try {
@@ -116,48 +103,127 @@ async function loadCharacterInventory() {
             itemDetailsMap[detail.id] = detail;
         });
 
-        resultsDiv.innerHTML = ``;
-        
-        allItems.forEach((itemData, index) => {
+        // Vyčistíme stará data a uložíme nová, rozšířená o detaily
+        currentInventoryData = [];
+        allItems.forEach((itemData) => {
             const details = itemDetailsMap[itemData.id];
-            if (!details) return;
-
-            const wikiLink = `https://wiki.guildwars2.com/wiki/${details.name.replace(/ /g, '_')}`;
-            
-            let cssClass = "";
-            if (details.type === "Junk") cssClass = "junk";
-            else if (details.type === "CraftingMaterial") cssClass = "material";
-            else if (details.rarity === "Rare") cssClass = "rare";
-            else if (details.rarity === "Ascended") cssClass = "ascended";
-            else if (details.rarity === "Legendary") cssClass = "legendary";
-
-            const wikiTextId = `wiki-response-${index}`;
-            const safeNameForFetch = encodeURIComponent(details.name);
-
-            resultsDiv.innerHTML += `
-                <div class="item ${cssClass}">
-                    <img src="${details.icon}" alt="ikona">
-                    <div>
-                        <strong style="font-size: 1.1em;">${details.name}</strong><br>
-                        <span style="color: #666; font-size: 0.9em;">Rarita: <strong>${details.rarity}</strong> | Množství: <strong>${itemData.count}</strong></span><br>
-                        <a href="${wikiLink}" target="_blank" style="color: #0055ff; text-decoration: none; font-size: 0.9em;">Otevřít na GW2 Wiki</a><br>
-                        
-                        <button class="btn" style="font-size: 12px; padding: 5px 10px; margin-top: 5px;" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">
-                            📖 Načíst a přeložit shrnutí z Wiki
-                        </button>
-                        <div id="${wikiTextId}" class="wiki-summary"></div>
-                    </div>
-                </div>
-            `;
+            if (details) {
+                currentInventoryData.push({
+                    id: details.id,
+                    name: details.name,
+                    count: itemData.count,
+                    type: details.type,
+                    rarity: details.rarity,
+                    icon: details.icon
+                });
+            }
         });
+
+        controlsDiv.style.display = 'flex'; // Zobrazí filtry
+        renderInventory(); // Vykreslí seznam
 
     } catch (error) {
         console.error(error);
-        resultsDiv.innerHTML = `<span style="color:red">Došlo k chybě: ${error.message}</span>`;
+        resultsDiv.innerHTML = `<span style="color:red">Došlo k chybě připojení.</span>`;
     }
 }
 
-// 5. Stažení z Wiki a překlad do češtiny
+// Vykreslování dat na základě vybraných filtrů
+function renderInventory() {
+    const resultsDiv = document.getElementById('results');
+    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    const rarityFilter = document.getElementById('rarityFilter').value;
+    
+    resultsDiv.innerHTML = '';
+    
+    // Vyfiltrování aktuálních dat
+    const filteredItems = currentInventoryData.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+        const matchesRarity = rarityFilter === "" || item.rarity === rarityFilter;
+        return matchesSearch && matchesRarity;
+    });
+
+    if (filteredItems.length === 0) {
+        resultsDiv.innerHTML = "<p style='color: #666;'>Žádné předměty neodpovídají filtru.</p>";
+        return;
+    }
+
+    // Vykreslení výsledků
+    filteredItems.forEach((item, index) => {
+        const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
+        
+        let cssClass = "";
+        if (item.type === "Junk") cssClass = "junk";
+        else if (item.type === "CraftingMaterial") cssClass = "material";
+        else if (item.rarity === "Rare") cssClass = "rare";
+        else if (item.rarity === "Ascended") cssClass = "ascended";
+        else if (item.rarity === "Legendary") cssClass = "legendary";
+
+        const wikiTextId = `wiki-response-${index}`;
+        const safeNameForFetch = encodeURIComponent(item.name);
+
+        resultsDiv.innerHTML += `
+            <div class="item ${cssClass}">
+                <img src="${item.icon}" alt="ikona">
+                <div>
+                    <strong style="font-size: 1.1em;">${item.name}</strong><br>
+                    <span style="color: #444; font-size: 0.9em;">
+                        Typ: <strong>${item.type}</strong> | Rarita: <strong>${item.rarity}</strong> | Množství: <strong>${item.count}</strong>
+                    </span><br>
+                    <a href="${wikiLink}" target="_blank" style="color: #0055ff; text-decoration: none; font-size: 0.9em;">Otevřít na GW2 Wiki</a><br>
+                    
+                    <button class="btn" style="font-size: 12px; padding: 5px 10px; margin-top: 8px;" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">
+                        📖 Načíst a přeložit shrnutí
+                    </button>
+                    <div id="${wikiTextId}" class="wiki-summary"></div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Vygenerování a stažení dat ve formátu CSV
+function exportToCSV() {
+    if (currentInventoryData.length === 0) {
+        alert("Není co exportovat.");
+        return;
+    }
+
+    // Exportujeme jen to, co má uživatel aktuálně vyfiltrované na obrazovce
+    const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+    const rarityFilter = document.getElementById('rarityFilter').value;
+    
+    const filteredItems = currentInventoryData.filter(item => {
+        return item.name.toLowerCase().includes(searchQuery) && 
+               (rarityFilter === "" || item.rarity === rarityFilter);
+    });
+
+    // Vytvoření hlavičky
+    let csvContent = "Název,Typ,Rarita,Množství\n";
+    
+    filteredItems.forEach(item => {
+        // Zpracování názvu pro případ, že obsahuje čárku
+        let name = item.name.replace(/"/g, '""');
+        csvContent += `"${name}","${item.type}","${item.rarity}",${item.count}\n`;
+    });
+
+    // Zápis do UTF-8 souboru, aby se správně četly háčky a čárky (BOM marker)
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // Virtuální kliknutí pro stažení
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "gw2_inventar.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Stažení z Wiki
 async function getWikiSummary(encodedItemName, elementId) {
     const summaryDiv = document.getElementById(elementId);
     summaryDiv.style.display = "block";
@@ -178,9 +244,7 @@ async function getWikiSummary(encodedItemName, elementId) {
         }
 
         let englishText = pages[pageId].extract;
-        if (englishText.length > 250) {
-            englishText = englishText.substring(0, 250) + "...";
-        }
+        if (englishText.length > 250) englishText = englishText.substring(0, 250) + "...";
 
         const translateUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(englishText)}&langpair=en|cs`;
         const translateResponse = await fetch(translateUrl);
