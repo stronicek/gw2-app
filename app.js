@@ -65,7 +65,6 @@ async function loadCharacterInventory() {
     const resultsDiv = document.getElementById('results');
     const controlsDiv = document.getElementById('inventory-controls');
 
-    // Vyčistíme filtry, aby nás neblokovaly při změně postavy
     document.getElementById('searchInput').value = '';
     document.getElementById('rarityFilter').value = '';
 
@@ -78,7 +77,6 @@ async function loadCharacterInventory() {
     resultsDiv.innerHTML = `<em>Načítám batohy pro postavu <strong>${selectedChar}</strong>...</em>`;
 
     try {
-        // 1. Získání struktury batohů
         const invResponse = await fetch(`https://api.guildwars2.com/v2/characters/${selectedChar}/inventory?access_token=${apiKey}`);
         if (!invResponse.ok) throw new Error("Chyba při stahování inventáře.");
         
@@ -87,7 +85,6 @@ async function loadCharacterInventory() {
         
         inventoryData.bags.forEach(bag => {
             if (bag && bag.inventory) {
-                // Odstraníme prázdné sloty (null)
                 const validItems = bag.inventory.filter(item => item !== null);
                 allItems.push(...validItems);
             }
@@ -98,11 +95,9 @@ async function loadCharacterInventory() {
             return;
         }
 
-        // 2. Extrakce unikátních ID (GW2 API povoluje max 200 na jeden dotaz)
         const uniqueIds = [...new Set(allItems.map(item => item.id))].slice(0, 200);
         const idsString = uniqueIds.join(',');
         
-        // 3. Získání detailů k předmětům (názvy, ikony, rarity)
         const itemsResponse = await fetch(`https://api.guildwars2.com/v2/items?ids=${idsString}`);
         if (!itemsResponse.ok) throw new Error("Chyba při načítání detailů předmětů.");
         
@@ -112,7 +107,6 @@ async function loadCharacterInventory() {
             itemDetailsMap[detail.id] = detail;
         });
 
-        // 4. Uložení propojených dat do hlavní paměti
         currentInventoryData = [];
         allItems.forEach((itemData) => {
             const details = itemDetailsMap[itemData.id];
@@ -128,11 +122,8 @@ async function loadCharacterInventory() {
             }
         });
 
-        if (currentInventoryData.length === 0) {
-             throw new Error("Předměty se nepodařilo spárovat s databází API.");
-        }
+        if (currentInventoryData.length === 0) throw new Error("Předměty se nepodařilo spárovat s databází API.");
 
-        // 5. Zobrazení panelu a vykreslení seznamu
         controlsDiv.style.display = 'flex';
         renderInventory();
 
@@ -142,17 +133,40 @@ async function loadCharacterInventory() {
     }
 }
 
+// LOKÁLNÍ AI ASISTENT PRO HERNÍ RADY
+function getSmartAdvice(item) {
+    const name = item.name.toLowerCase();
+    
+    if (item.type === "Junk") return "Vendor trash. Prodej u jakéhokoliv obchodníka přes tlačítko 'Sell Junk'.";
+    if (item.type === "CraftingMaterial") return "Materiál k výrobě. V inventáři klikni na ozubené kolečko a dej 'Deposit All Materials'.";
+    
+    if (name.includes("unidentified gear")) {
+        if (item.rarity === "Rare") return "Klikni pravým -> 'Use All'. Získané žluté věci rozeber Master's nebo Mystic kitem kvůli Ectoplasmům.";
+        return "Klikni pravým -> 'Use All'. Získané věci rozeber obyčejným (Basic) kitem na suroviny.";
+    }
+    
+    if (item.type === "Container") return "Dvojklikem rozbal a podívej se na loot uvnitř.";
+    if (item.type === "Consumable") return "Dočasný buff (jídlo/potion), teleport, nebo odemčení. Přečti si popisek a zkonzumuj, nebo prodej na Trading Postu.";
+    if (item.type === "UpgradeComponent") return "Vylepšení do zbroje/zbraně. Schovej si ho, nebo zkontroluj cenu na Trading Postu (často se dají dobře prodat).";
+    
+    if (item.type === "Armor" || item.type === "Weapon") {
+        if (item.rarity === "Ascended" || item.rarity === "Legendary") return "Nejsilnější výbava! Určitě si to schovej v bance na později.";
+        if (item.rarity === "Exotic") return "Pokud to nevyužiješ, zkontroluj cenu na Trading Postu. Pokud je levná, rozeber ji.";
+        return "Rozeber příslušným Salvage kitem, abys získal suroviny a uvolnil místo.";
+    }
+    
+    if (item.type === "Trophy") return "Často součást příběhu nebo sbírky (Collection). Pokud už je sbírka hotová, můžeš bezpečně zničit.";
+    
+    return "Neznámý předmět. Schovej ho do banky a zjisti víc pomocí tlačítka Wiki.";
+}
+
 function renderInventory() {
     const resultsDiv = document.getElementById('results');
     
-    // Zabezpečené získání textu pro vyhledávání (trim odstraní mezery z okrajů)
     const searchInput = document.getElementById('searchInput');
     const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : "";
-    
     const raritySelect = document.getElementById('rarityFilter');
     const rarityFilter = raritySelect ? raritySelect.value : "";
-    
-    resultsDiv.innerHTML = '';
     
     const filteredItems = currentInventoryData.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery);
@@ -165,51 +179,61 @@ function renderInventory() {
         return;
     }
 
+    // Začátek HTML Tabulky
+    let tableHTML = `
+        <table class="inventory-table">
+            <thead>
+                <tr>
+                    <th colspan="2">Předmět</th>
+                    <th>Typ</th>
+                    <th>Rarita</th>
+                    <th>K čemu slouží</th>
+                    <th>Co s tím (Chytrá rada)</th>
+                    <th>Wiki</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
     filteredItems.forEach((item, index) => {
         const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
-        
-        let cssClass = "";
-        if (item.type === "Junk") cssClass = "junk";
-        else if (item.type === "CraftingMaterial") cssClass = "material";
-        else if (item.rarity === "Rare") cssClass = "rare";
-        else if (item.rarity === "Ascended") cssClass = "ascended";
-        else if (item.rarity === "Legendary") cssClass = "legendary";
-
-        const wikiTextId = `wiki-response-${index}`;
         const safeNameForFetch = encodeURIComponent(item.name);
+        const wikiTextId = `wiki-response-${index}`;
+        
+        // Získáme automatickou radu
+        const advice = getSmartAdvice(item);
 
-        resultsDiv.innerHTML += `
-            <div class="item ${cssClass}">
-                <img src="${item.icon}" alt="ikona">
-                <div>
-                    <strong style="font-size: 1.1em;">${item.name}</strong><br>
-                    <span style="color: #444; font-size: 0.9em;">
-                        Typ: <strong>${item.type}</strong> | Rarita: <strong>${item.rarity}</strong> | Množství: <strong>${item.count}</strong>
-                    </span><br>
-                    <a href="${wikiLink}" target="_blank" style="color: #0055ff; text-decoration: none; font-size: 0.9em;">Otevřít na GW2 Wiki</a><br>
-                    
-                    <button class="btn" style="font-size: 12px; padding: 5px 10px; margin-top: 8px;" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">
-                        📖 Načíst a přeložit shrnutí
-                    </button>
-                    <div id="${wikiTextId}" class="wiki-summary"></div>
-                </div>
-            </div>
+        tableHTML += `
+            <tr>
+                <td class="td-icon"><img src="${item.icon}" alt="icon"></td>
+                <td>
+                    <strong>${item.name}</strong><br>
+                    <span style="color:#666; font-size:12px;">Množství: ${item.count}</span>
+                </td>
+                <td>${item.type}</td>
+                <td class="rarity-${item.rarity}">${item.rarity}</td>
+                <td style="max-width: 200px;">
+                    <button class="btn btn-small" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">📖 Zjistit z Wiki</button>
+                    <div id="${wikiTextId}" class="wiki-result"></div>
+                </td>
+                <td style="color: #1565C0; font-weight: 500; max-width: 250px;">💡 ${advice}</td>
+                <td><a href="${wikiLink}" target="_blank" style="color: var(--gw2-red); font-weight: bold; text-decoration: none;">Odkaz ↗</a></td>
+            </tr>
         `;
     });
+
+    tableHTML += `</tbody></table>`;
+    resultsDiv.innerHTML = tableHTML;
 }
 
 function exportToCSV() {
-    if (currentInventoryData.length === 0) {
-        alert("Není co exportovat.");
-        return;
-    }
+    if (currentInventoryData.length === 0) return alert("Není co exportovat.");
 
     const searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
     const rarityFilter = document.getElementById('rarityFilter').value;
     
     const filteredItems = currentInventoryData.filter(item => {
-        return item.name.toLowerCase().includes(searchQuery) && 
-               (rarityFilter === "" || item.rarity === rarityFilter);
+        return item.name.toLowerCase().includes(searchQuery) && (rarityFilter === "" || item.rarity === rarityFilter);
     });
 
     let csvContent = "Název,Typ,Rarita,Množství\n";
@@ -234,7 +258,7 @@ function exportToCSV() {
 async function getWikiSummary(encodedItemName, elementId) {
     const summaryDiv = document.getElementById(elementId);
     summaryDiv.style.display = "block";
-    summaryDiv.innerHTML = "<em>Stahuji a překládám... ⏳</em>";
+    summaryDiv.innerHTML = "<em>Stahuji... ⏳</em>";
 
     const wikiUrl = `https://wiki.guildwars2.com/api.php?action=query&prop=extracts&exintro=1&explaintext=1&titles=${encodedItemName}&format=json&origin=*`;
 
@@ -246,26 +270,25 @@ async function getWikiSummary(encodedItemName, elementId) {
         const pageId = Object.keys(pages)[0];
 
         if (pageId === "-1" || !pages[pageId].extract) {
-            summaryDiv.innerHTML = "<em>Shrnutí pro tento předmět nebylo na Wiki nalezeno.</em>";
+            summaryDiv.innerHTML = "<em>Nenalezeno.</em>";
             return;
         }
 
         let englishText = pages[pageId].extract;
-        if (englishText.length > 250) englishText = englishText.substring(0, 250) + "...";
+        if (englishText.length > 200) englishText = englishText.substring(0, 200) + "...";
 
         const translateUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(englishText)}&langpair=en|cs`;
         const translateResponse = await fetch(translateUrl);
         const translateData = await translateResponse.json();
 
-        let czechText = "Nepodařilo se přeložit.";
+        let czechText = "Chyba překladu.";
         if (translateData && translateData.responseData && translateData.responseData.translatedText) {
             czechText = translateData.responseData.translatedText;
         }
 
-        summaryDiv.innerHTML = `<strong>O čem to je:</strong> ${czechText}`;
+        summaryDiv.innerHTML = czechText;
 
     } catch (error) {
-        console.error(error);
-        summaryDiv.innerHTML = "<span style='color:red'>Nepodařilo se připojit k Wiki nebo překladači.</span>";
+        summaryDiv.innerHTML = "<span style='color:red'>Chyba spojení.</span>";
     }
 }
