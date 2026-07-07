@@ -9,6 +9,7 @@
             --gw2-red: #b21e1e; 
             --bg-dark: #1a1a1a; 
             --bg-light: #f4f4f4; 
+            --border-color: #e0e0e0;
         }
         
         body { margin: 0; display: flex; height: 100vh; font-family: Arial, sans-serif; background-color: var(--bg-light); overflow: hidden; }
@@ -25,19 +26,19 @@
 
         /* --- HLAVNÍ OBSAH --- */
         main { flex: 1; padding: 30px; overflow-y: auto; }
-        .view-section { display: none; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); max-width: 900px; margin: 0 auto; }
+        .view-section { display: none; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 0 auto; }
         .view-section.active { display: block; }
         
         /* --- DLAŽDICE --- */
         .dashboard-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 30px; }
-        .tile { background: white; border: 1px solid #ddd; border-top: 4px solid var(--gw2-red); border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .tile { background: white; border: 1px solid #ddd; border-top: 4px solid var(--gw2-red); border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
         .tile:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); background: #fafafa; }
         .tile-icon { font-size: 45px; margin-bottom: 10px; }
         .tile-title { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 10px; }
         .tile-desc { font-size: 0.9rem; color: #666; }
 
         /* --- STYLY PRVKŮ --- */
-        h1, h2 { color: var(--gw2-red); margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        h1, h2 { color: var(--gw2-red); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         input[type="text"], select { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
         
         .btn { background-color: var(--gw2-red); color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
@@ -46,18 +47,29 @@
         .btn-danger:hover { background-color: #444; }
         .btn-success { background-color: #4CAF50; }
         .btn-success:hover { background-color: #45a049; }
+        .btn-small { padding: 5px 10px; font-size: 12px; }
 
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        .item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; gap: 15px; align-items: center; background: #fafafa; border-radius: 4px;}
-        .item img { width: 45px; height: 45px; border-radius: 4px;}
-        .junk { border-left: 5px solid gray; }
-        .material { border-left: 5px solid green; }
-        .rare { border-left: 5px solid #ffd700; }
-        .ascended { border-left: 5px solid #ff69b4; background-color: #fff0f5; }
-        .legendary { border-left: 5px solid #800080; background-color: #f3e5f5; }
+        /* --- TABULKA INVENTÁŘE --- */
+        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
+        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; position: sticky; top: -30px; z-index: 5; }
+        .inventory-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .inventory-table tr:hover { background-color: #f9f9f9; }
+        .td-icon { width: 40px; padding-right: 0 !important; }
+        .td-icon img { width: 32px; height: 32px; border-radius: 4px; display: block; }
         
-        .wiki-summary { margin-top: 10px; font-size: 14px; background: #eef; padding: 10px; border-radius: 4px; display: none; }
+        /* Barvy Rarity v tabulce */
+        .rarity-Junk { color: #888; font-weight: bold; }
+        .rarity-Basic { color: #000; font-weight: bold; }
+        .rarity-Fine { color: #2196F3; font-weight: bold; }
+        .rarity-Masterwork { color: #4CAF50; font-weight: bold; }
+        .rarity-Rare { color: #FBC02D; font-weight: bold; }
+        .rarity-Exotic { color: #FF9800; font-weight: bold; }
+        .rarity-Ascended { color: #E91E63; font-weight: bold; }
+        .rarity-Legendary { color: #9C27B0; font-weight: bold; }
+
+        .wiki-result { margin-top: 5px; font-size: 12px; background: #eef; padding: 8px; border-radius: 4px; display: none; color: #333; }
     </style>
 </head>
 <body>
@@ -100,7 +112,7 @@
             </div>
         </div>
         
-        <div id="view-inventory" class="view-section">
+        <div id="view-inventory" class="view-section" style="max-width: 1200px;">
             <h2>Inventář postav</h2>
             <label for="charSelect"><strong>Vyber postavu:</strong></label><br>
             <select id="charSelect" onchange="loadCharacterInventory()" style="max-width: 350px;">
@@ -120,7 +132,7 @@
                     <option value="Ascended">Ascended</option>
                     <option value="Legendary">Legendary</option>
                 </select>
-                <button class="btn btn-success" onclick="exportToCSV()">⬇ Export do Excelu (CSV)</button>
+                <button class="btn btn-success" onclick="exportToCSV()">⬇ Export (CSV)</button>
             </div>
             
             <div id="results" style="margin-top: 25px;">
