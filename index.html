@@ -13,7 +13,7 @@
         
         body { margin: 0; display: flex; height: 100vh; font-family: Arial, sans-serif; background-color: var(--bg-light); overflow: hidden; }
         
-        /* --- LEVÉ MENU (SIDEBAR) --- */
+        /* --- LEVÉ MENU --- */
         #sidebar { background-color: var(--bg-dark); color: white; width: 220px; transition: width 0.3s ease; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 10; }
         #sidebar.collapsed { width: 60px; }
         #sidebar button { background: none; border: none; color: #ccc; padding: 15px 0; text-align: left; font-size: 16px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; border-left: 4px solid transparent; transition: 0.2s; }
@@ -47,7 +47,6 @@
         .btn-success { background-color: #4CAF50; }
         .btn-success:hover { background-color: #45a049; }
 
-        /* Ovládací panel filtru */
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
         .item { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; display: flex; gap: 15px; align-items: center; background: #fafafa; border-radius: 4px;}
@@ -93,6 +92,11 @@
                     <div class="tile-title">Správa API klíče</div>
                     <div class="tile-desc">Aktualizuj nebo smaž svůj přístupový klíč z ArenaNetu.</div>
                 </div>
+                <div class="tile" onclick="window.open('https://wiki.guildwars2.com/', '_blank')">
+                    <div class="tile-icon">📖</div>
+                    <div class="tile-title">Oficiální Wiki</div>
+                    <div class="tile-desc">Otevři si herní encyklopedii v novém okně.</div>
+                </div>
             </div>
         </div>
         
@@ -105,7 +109,6 @@
             
             <div id="inventory-controls" class="controls-panel" style="display: none;">
                 <input type="text" id="searchInput" placeholder="Hledat podle názvu..." onkeyup="renderInventory()" style="flex: 1; min-width: 150px;">
-                
                 <select id="rarityFilter" onchange="renderInventory()" style="width: auto;">
                     <option value="">-- Všechny rarity --</option>
                     <option value="Junk">Junk</option>
@@ -117,7 +120,6 @@
                     <option value="Ascended">Ascended</option>
                     <option value="Legendary">Legendary</option>
                 </select>
-                
                 <button class="btn btn-success" onclick="exportToCSV()">⬇ Export do Excelu (CSV)</button>
             </div>
             
