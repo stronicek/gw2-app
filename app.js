@@ -160,14 +160,13 @@ function getSmartAdvice(item) {
     return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
 }
 
-// PROPOJENÍ S TVÝM VLASTNÍM GEMINI GEMEM
+// PROPOJENÍ S TVÝM VLASTNÍM GEMINI GEMEM (S PŘIDANÝM TAGEM)
 function askGemini(itemName) {
-    // Upravený dotaz pro speciálně natrénovaného Gema
-    const promptText = `K čemu přesně slouží předmět "${itemName}" a co s ním mám ideálně udělat?`;
+    // Přidán tag [GW2app] na začátek dotazu
+    const promptText = `[GW2app] K čemu přesně slouží předmět "${itemName}" a co s ním mám ideálně udělat?`;
     
     navigator.clipboard.writeText(promptText).then(() => {
         alert("Dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
-        // Otevírá tvůj specifický Gem link
         window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
     }).catch(err => {
         console.error('Chyba při kopírování do schránky: ', err);
