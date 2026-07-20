@@ -157,7 +157,23 @@ function getSmartAdvice(item) {
     
     if (item.type === "Trophy") return "Často součást příběhu nebo sbírky (Collection). Pokud už je sbírka hotová, můžeš bezpečně zničit.";
     
-    return "Neznámý předmět. Schovej ho do banky a zjisti víc pomocí tlačítka Wiki.";
+    return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
+}
+
+// PROPOJENÍ S TVÝM VLASTNÍM GEMINI GEMEM
+function askGemini(itemName) {
+    // Upravený dotaz pro speciálně natrénovaného Gema
+    const promptText = `K čemu přesně slouží předmět "${itemName}" a co s ním mám ideálně udělat?`;
+    
+    navigator.clipboard.writeText(promptText).then(() => {
+        alert("Dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
+        // Otevírá tvůj specifický Gem link
+        window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
+    }).catch(err => {
+        console.error('Chyba při kopírování do schránky: ', err);
+        alert("Prohlížeč zablokoval automatické kopírování. Otevírám tvého Gema, dotaz prosím napiš ručně.");
+        window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
+    });
 }
 
 function renderInventory() {
@@ -179,17 +195,14 @@ function renderInventory() {
         return;
     }
 
-    // Začátek HTML Tabulky
     let tableHTML = `
         <table class="inventory-table">
             <thead>
                 <tr>
                     <th colspan="2">Předmět</th>
-                    <th>Typ</th>
-                    <th>Rarita</th>
-                    <th>K čemu slouží</th>
+                    <th>Typ & Rarita</th>
                     <th>Co s tím (Chytrá rada)</th>
-                    <th>Wiki</th>
+                    <th>Více informací</th>
                 </tr>
             </thead>
             <tbody>
@@ -198,9 +211,10 @@ function renderInventory() {
     filteredItems.forEach((item, index) => {
         const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
         const safeNameForFetch = encodeURIComponent(item.name);
+        // Ošetření názvu pro JS funkci
+        const safeNameForGemini = item.name.replace(/'/g, "\\'"); 
         const wikiTextId = `wiki-response-${index}`;
         
-        // Získáme automatickou radu
         const advice = getSmartAdvice(item);
 
         tableHTML += `
@@ -210,14 +224,20 @@ function renderInventory() {
                     <strong>${item.name}</strong><br>
                     <span style="color:#666; font-size:12px;">Množství: ${item.count}</span>
                 </td>
-                <td>${item.type}</td>
-                <td class="rarity-${item.rarity}">${item.rarity}</td>
-                <td style="max-width: 200px;">
-                    <button class="btn btn-small" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">📖 Zjistit z Wiki</button>
-                    <div id="${wikiTextId}" class="wiki-result"></div>
+                <td>
+                    ${item.type}<br>
+                    <span class="rarity-${item.rarity}">${item.rarity}</span>
                 </td>
                 <td style="color: #1565C0; font-weight: 500; max-width: 250px;">💡 ${advice}</td>
-                <td><a href="${wikiLink}" target="_blank" style="color: var(--gw2-red); font-weight: bold; text-decoration: none;">Odkaz ↗</a></td>
+                <td style="max-width: 200px;">
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <button class="btn btn-small" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">📖 Zjistit z Wiki</button>
+                        <!-- TLAČÍTKO PRO TVŮJ GEM -->
+                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGemini('${safeNameForGemini}')">🤖 Zeptat se Gemini</button>
+                        <a href="${wikiLink}" target="_blank" style="color: var(--gw2-red); font-weight: bold; text-decoration: none; font-size: 12px; margin-top: 5px;">Odkaz na Wiki ↗</a>
+                    </div>
+                    <div id="${wikiTextId}" class="wiki-result"></div>
+                </td>
             </tr>
         `;
     });
