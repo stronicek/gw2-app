@@ -153,7 +153,6 @@ function getSmartAdvice(item) {
     return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
 }
 
-// ROZŠÍŘENÝ DOTAZ PRO GEMINI
 function askGeminiById(itemId) {
     const item = currentInventoryData.find(i => i.id === itemId);
     if (!item) return;
@@ -170,15 +169,13 @@ function askGeminiById(itemId) {
     });
 }
 
-// NOVÝ STROHÝ DOTAZ PRO GOOGLE
+// NOVÝ FORMÁT VYHLEDÁVÁNÍ PRO GOOGLE
 function searchGoogleById(itemId) {
     const item = currentInventoryData.find(i => i.id === itemId);
     if (!item) return;
     
-    const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
-    
-    // Klíčová slova bez zbytečného textu
-    const queryText = `"Guild Wars 2" "${item.name}" ${item.type} ${item.rarity} ${wikiLink}`;
+    // Klíčová slova přesně podle zadání
+    const queryText = `GW2 ${item.name} česky`;
     
     const query = encodeURIComponent(queryText);
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
