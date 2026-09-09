@@ -133,7 +133,6 @@ async function loadCharacterInventory() {
     }
 }
 
-// LOKÁLNÍ AI ASISTENT PRO HERNÍ RADY
 function getSmartAdvice(item) {
     const name = item.name.toLowerCase();
     
@@ -160,19 +159,28 @@ function getSmartAdvice(item) {
     return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
 }
 
-// PROPOJENÍ S TVÝM VLASTNÍM GEMINI GEMEM (S PŘIDANÝM TAGEM)
-function askGemini(itemName) {
-    // Přidán tag [GW2app] na začátek dotazu
-    const promptText = `[GW2app] K čemu přesně slouží předmět "${itemName}" a co s ním mám ideálně udělat?`;
+// PROPOJENÍ S GEMINI - NOVĚ S ROZŠÍŘENÝM PROMPTEM
+function askGemini(itemName, itemType, itemRarity) {
+    const wikiLink = `https://wiki.guildwars2.com/wiki/${itemName.replace(/ /g, '_')}`;
+    
+    // Rozšířený dotaz s parametry a tagem [GW2app]
+    const promptText = `[GW2app] Ahoj, mám v inventáři předmět "${itemName}".\n\nDodatečné informace:\n- Typ: ${itemType}\n- Rarita: ${itemRarity}\n- Wiki: ${wikiLink}\n\nMůžeš mi poradit, k čemu přesně slouží a co je pro mě nejvýhodnější s ním udělat?`;
     
     navigator.clipboard.writeText(promptText).then(() => {
-        alert("Dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
+        alert("Rozšířený dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
         window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
     }).catch(err => {
         console.error('Chyba při kopírování do schránky: ', err);
         alert("Prohlížeč zablokoval automatické kopírování. Otevírám tvého Gema, dotaz prosím napiš ručně.");
         window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
     });
+}
+
+// NOVÁ FUNKCE PRO RYCHLÉ VYHLEDÁVÁNÍ NA GOOGLU
+function searchGoogle(itemName) {
+    // Přidá název hry do vyhledávání pro lepší výsledky
+    const query = encodeURIComponent(`"Guild Wars 2" ${itemName}`);
+    window.open(`https://www.google.com/search?q=${query}`, '_blank');
 }
 
 function renderInventory() {
@@ -210,8 +218,9 @@ function renderInventory() {
     filteredItems.forEach((item, index) => {
         const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
         const safeNameForFetch = encodeURIComponent(item.name);
-        // Ošetření názvu pro JS funkci
-        const safeNameForGemini = item.name.replace(/'/g, "\\'"); 
+        
+        // Ošetření názvu pro JS funkce (aby nám apostrofy nerozbily kód)
+        const safeNameForJS = item.name.replace(/'/g, "\\'").replace(/"/g, "\\\""); 
         const wikiTextId = `wiki-response-${index}`;
         
         const advice = getSmartAdvice(item);
@@ -230,10 +239,15 @@ function renderInventory() {
                 <td style="color: #1565C0; font-weight: 500; max-width: 250px;">💡 ${advice}</td>
                 <td style="max-width: 200px;">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
+                        
                         <button class="btn btn-small" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">📖 Zjistit z Wiki</button>
-                        <!-- TLAČÍTKO PRO TVŮJ GEM -->
-                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGemini('${safeNameForGemini}')">🤖 Zeptat se Gemini</button>
-                        <a href="${wikiLink}" target="_blank" style="color: var(--gw2-red); font-weight: bold; text-decoration: none; font-size: 12px; margin-top: 5px;">Odkaz na Wiki ↗</a>
+                        
+                        <!-- PŘIDÁNO: Rozšířené volání Gemini s typem a raritou -->
+                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGemini('${safeNameForJS}', '${item.type}', '${item.rarity}')">🤖 Zeptat se Gemini</button>
+                        
+                        <!-- NOVÉ TLAČÍTKO: Hledat na Googlu -->
+                        <button class="btn btn-small" style="background-color: #333;" onclick="searchGoogle('${safeNameForJS}')">🔍 Hledat na Googlu</button>
+                        
                     </div>
                     <div id="${wikiTextId}" class="wiki-result"></div>
                 </td>
