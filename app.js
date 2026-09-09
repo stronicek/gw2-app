@@ -170,15 +170,17 @@ function askGeminiById(itemId) {
     });
 }
 
-// DOTAZ PRO GOOGLE (Nyní vkládá ten samý obsáhlý prompt)
+// NOVÝ STROHÝ DOTAZ PRO GOOGLE
 function searchGoogleById(itemId) {
     const item = currentInventoryData.find(i => i.id === itemId);
     if (!item) return;
     
     const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
-    const promptText = `[GW2app] Ahoj, mám v inventáři předmět "${item.name}".\n\nDodatečné informace:\n- Typ: ${item.type}\n- Rarita: ${item.rarity}\n- Wiki: ${wikiLink}\n\nMůžeš mi poradit, k čemu přesně slouží a co je pro mě nejvýhodnější s ním udělat?`;
     
-    const query = encodeURIComponent(promptText);
+    // Klíčová slova bez zbytečného textu
+    const queryText = `"Guild Wars 2" "${item.name}" ${item.type} ${item.rarity} ${wikiLink}`;
+    
+    const query = encodeURIComponent(queryText);
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
 }
 
@@ -233,7 +235,6 @@ function renderInventory() {
                 <td style="max-width: 200px;">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                         
-                        <!-- PŘÍMÝ ODKAZ NA WIKI STYLOVANÝ JAKO TLAČÍTKO -->
                         <a href="${wikiLink}" target="_blank" class="btn btn-small" style="background-color: var(--gw2-red); text-align: center; text-decoration: none; display: block; box-sizing: border-box;">📖 Otevřít na Wiki</a>
                         
                         <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGeminiById(${item.id})">🤖 Zeptat se Gemini</button>
