@@ -24,14 +24,14 @@
         #sidebar.collapsed .nav-text { opacity: 0; pointer-events: none; }
         #toggle-btn { background-color: #000 !important; border-bottom: 1px solid #333; border-left: none !important; justify-content: flex-start; }
 
-        /* --- HLAVNÍ OBSAH A SJEDNOCENÉ BOXY --- */
+        /* --- HLAVNÍ OBSAH A BOXY --- */
         main { 
             flex: 1; 
             padding: 30px; 
             overflow-y: auto; 
             display: flex;
             flex-direction: column;
-            align-items: center; /* Drží všechny boxy krásně uprostřed */
+            align-items: center;
         }
         .view-section { 
             display: none; 
@@ -40,7 +40,7 @@
             border-radius: 8px; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
             width: 100%; 
-            max-width: 1100px; /* Sjednocená velikost pro VŠECHNY záložky */
+            max-width: 1100px;
             box-sizing: border-box; 
         }
         .view-section.active { display: block; }
@@ -63,13 +63,13 @@
         .btn-danger:hover { background-color: #444; }
         .btn-success { background-color: #4CAF50; }
         .btn-success:hover { background-color: #45a049; }
-        .btn-small { padding: 6px 12px; font-size: 12px; margin-bottom: 5px; width: 100%; box-sizing: border-box; } /* Tlačítka u předmětů na celou šířku buňky */
+        .btn-small { padding: 8px 12px; font-size: 13px; margin-bottom: 5px; width: 100%; box-sizing: border-box; border-radius: 4px;}
 
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        /* --- TABULKA INVENTÁŘE --- */
-        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } /* Posunování na mobilu */
-        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; min-width: 700px; }
+        /* --- TABULKA INVENTÁŘE (Základ pro PC) --- */
+        .table-responsive { width: 100%; }
+        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
         .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
         .inventory-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         .inventory-table tr:hover { background-color: #f9f9f9; }
@@ -85,13 +85,15 @@
         .rarity-Ascended { color: #E91E63; font-weight: bold; }
         .rarity-Legendary { color: #9C27B0; font-weight: bold; }
 
+        .mobile-label { display: none; } /* Na PC skryto */
+
         /* =========================================
-           MOBILNÍ ZOBRAZENÍ (Přizpůsobení PWA appce)
+           MOBILNÍ ZOBRAZENÍ (Přizpůsobení)
            ========================================= */
         @media (max-width: 768px) {
             body { flex-direction: column; }
             
-            /* Levé menu se stane spodní navigační lištou */
+            /* Spodní lišta navigace */
             #sidebar {
                 width: 100% !important;
                 height: 65px;
@@ -102,7 +104,8 @@
                 left: 0;
                 z-index: 1000;
             }
-            #toggle-btn { display: none; } /* Skryje tlačítko skládání */
+            /* TVRDÉ SKRYTÍ TLAČÍTKA NA MOBILU */
+            #toggle-btn { display: none !important; }
             
             #sidebar button {
                 flex: 1;
@@ -118,21 +121,52 @@
             }
             
             .nav-icon { min-width: auto; font-size: 20px; margin-bottom: 4px; }
-            /* Vynucené zobrazení textu menu na mobilech */
             #sidebar .nav-text { display: block; font-size: 11px; opacity: 1 !important; pointer-events: auto !important; }
             
-            /* Úprava hlavní oblasti, aby ji nepřekrývala spodní lišta */
             main { padding: 15px; margin-bottom: 65px; }
             .view-section { padding: 20px 15px; }
             
             .controls-panel { flex-direction: column; align-items: stretch; }
-            .controls-panel input, .controls-panel select, .controls-panel button { width: 100%; max-width: none; margin-top: 5px;}
+            .controls-panel input, .controls-panel select, .controls-panel button { width: 100%; max-width: none; margin-top: 5px; }
+            
+            /* --- MOBILNÍ TABULKA = KARTY --- */
+            .inventory-table, .inventory-table tbody { display: block; width: 100%; }
+            .inventory-table thead { display: none; } /* Skryje horní hlavičku tabulky */
+            
+            .inventory-table tr {
+                display: grid;
+                grid-template-columns: 45px 1fr;
+                grid-template-areas: 
+                    "icon name"
+                    "details details"
+                    "advice advice"
+                    "actions actions";
+                gap: 5px;
+                margin-bottom: 15px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 12px;
+                background: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+            .inventory-table td { border: none; padding: 5px 0; display: block; width: 100%; box-sizing: border-box; }
+            
+            .td-icon { grid-area: icon; padding: 0 !important; }
+            .td-name { grid-area: name; align-self: center; }
+            
+            .td-details { grid-area: details; border-top: 1px solid #eee; padding-top: 10px !important; margin-top: 5px; }
+            .td-advice { grid-area: advice; background: #f4f6f8; padding: 12px !important; border-radius: 6px; font-size: 0.9rem; }
+            .td-actions { grid-area: actions; border-top: 1px solid #eee; padding-top: 10px !important; margin-top: 5px;}
+            
+            /* Zobrazí popisky (Typ, Rarita) uvnitř mobilních karet */
+            .mobile-label { display: inline-block; font-weight: bold; color: #666; margin-right: 5px; min-width: 55px; }
         }
     </style>
 </head>
 <body>
 
     <nav id="sidebar">
+        <!-- Zde je tlačítko, které se na mobilu pomocí CSS absolutně skryje -->
         <button id="toggle-btn" onclick="toggleMenu()">
             <span class="nav-icon">☰</span><span class="nav-text">Skrýt menu</span>
         </button>
@@ -148,7 +182,6 @@
     </nav>
     
     <main>
-        <!-- 1. Úvodní stránka -->
         <div id="view-home" class="view-section active">
             <h1>Guild Wars 2 Rozcestník</h1>
             <p style="color: #666; font-size: 1.1rem;">Vítej zpět! Co chceš dnes spravovat?</p>
@@ -171,7 +204,6 @@
             </div>
         </div>
         
-        <!-- 2. Inventář -->
         <div id="view-inventory" class="view-section">
             <h2>Inventář postav</h2>
             <label for="charSelect"><strong>Vyber postavu:</strong></label><br>
@@ -200,7 +232,6 @@
             </div>
         </div>
         
-        <!-- 3. Nastavení -->
         <div id="view-settings" class="view-section">
             <h2>Nastavení aplikace</h2>
             <label for="apiKey"><strong>GW2 API Klíč:</strong></label><br>
@@ -213,7 +244,7 @@
         </div>
     </main>
 
-    <!-- Cache Busting parametr ?v=7 donutí prohlížeč načíst nový soubor -->
-    <script src="app.js?v=7"></script>
+    <!-- Vynucení načtení nejnovějšího JavaScriptu -->
+    <script src="app.js?v=8"></script>
 </body>
 </html>
