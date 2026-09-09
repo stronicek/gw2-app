@@ -50,12 +50,28 @@
         
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        /* --- TLAČÍTKA U PŘEDMĚTŮ (PC VERZE) --- */
+        /* --- TABULKA INVENTÁŘE (PC) --- */
+        .table-responsive { width: 100%; }
+        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
+        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
+        .inventory-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .inventory-table tr:hover { background-color: #f9f9f9; }
+        
+        /* PEVNÉ ŠÍŘKY SLOUPCŮ PRO PC (Aby se to nerozpadlo) */
+        .td-icon { width: 40px; padding-right: 0 !important; }
+        .td-icon img { width: 32px; height: 32px; border-radius: 4px; display: block; }
+        .td-advice { max-width: 260px; color: #1565C0; font-weight: 500; line-height: 1.4; }
+        .td-actions { width: 160px; } /* Pevná šířka pro sloupec s tlačítky */
+
+        /* --- TLAČÍTKA U PŘEDMĚTŮ (PC) --- */
         .actions-wrapper { display: flex; flex-direction: column; gap: 5px; }
         .btn-small { 
             padding: 6px 10px; 
             font-size: 12px; 
-            display: block; 
+            display: inline-flex; 
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             width: 100%; 
             box-sizing: border-box; 
             border: none; 
@@ -70,16 +86,8 @@
         .btn-gemini { background-color: #1a73e8; }
         .btn-google { background-color: #333; }
         .btn-small:hover { filter: brightness(1.2); }
-
-        /* --- TABULKA INVENTÁŘE (PC) --- */
-        .table-responsive { width: 100%; }
-        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
-        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
-        .inventory-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        .inventory-table tr:hover { background-color: #f9f9f9; }
-        .td-icon { width: 40px; padding-right: 0 !important; }
-        .td-icon img { width: 32px; height: 32px; border-radius: 4px; display: block; }
         
+        /* Barvy Rarity */
         .rarity-Junk { color: #888; font-weight: bold; }
         .rarity-Basic { color: #000; font-weight: bold; }
         .rarity-Fine { color: #2196F3; font-weight: bold; }
@@ -90,7 +98,7 @@
         .rarity-Legendary { color: #9C27B0; font-weight: bold; }
 
         /* =========================================
-           MOBILNÍ ZOBRAZENÍ (Kompaktní)
+           MOBILNÍ ZOBRAZENÍ (Kompaktní bez rady)
            ========================================= */
         @media (max-width: 768px) {
             body { flex-direction: column; }
@@ -133,7 +141,7 @@
             
             .inventory-table td { padding: 0 !important; border: none !important; }
             
-            .td-icon { grid-area: icon; }
+            .td-icon { grid-area: icon; width: auto; }
             .td-icon img { width: 42px; height: 42px; border-radius: 4px; }
             
             .td-name { grid-area: name; align-self: end; line-height: 1.2; }
@@ -143,7 +151,7 @@
             .td-advice { display: none !important; }
             
             /* Kompaktní tlačítka vedle sebe */
-            .td-actions { grid-area: actions; margin-top: 6px; }
+            .td-actions { grid-area: actions; margin-top: 6px; width: 100%; }
             .actions-wrapper {
                 display: grid !important;
                 grid-template-columns: 1fr 1fr 1fr;
@@ -155,6 +163,7 @@
                 padding: 6px 2px !important;
                 font-size: 11px !important;
                 border-radius: 4px;
+                gap: 2px;
             }
         }
     </style>
@@ -239,6 +248,6 @@
         </div>
     </main>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
 </body>
 </html>
