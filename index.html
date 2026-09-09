@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GW2 Správce Inventáře</title>
     <style>
         :root { 
@@ -14,7 +14,7 @@
         
         body { margin: 0; display: flex; height: 100vh; font-family: Arial, sans-serif; background-color: var(--bg-light); overflow: hidden; }
         
-        /* --- LEVÉ MENU --- */
+        /* --- LEVÉ MENU (PC) --- */
         #sidebar { background-color: var(--bg-dark); color: white; width: 220px; transition: width 0.3s ease; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 10; }
         #sidebar.collapsed { width: 60px; }
         #sidebar button { background: none; border: none; color: #ccc; padding: 15px 0; text-align: left; font-size: 16px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; border-left: 4px solid transparent; transition: 0.2s; }
@@ -24,9 +24,25 @@
         #sidebar.collapsed .nav-text { opacity: 0; pointer-events: none; }
         #toggle-btn { background-color: #000 !important; border-bottom: 1px solid #333; border-left: none !important; justify-content: flex-start; }
 
-        /* --- HLAVNÍ OBSAH --- */
-        main { flex: 1; padding: 30px; overflow-y: auto; }
-        .view-section { display: none; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin: 0 auto; }
+        /* --- HLAVNÍ OBSAH A SJEDNOCENÉ BOXY --- */
+        main { 
+            flex: 1; 
+            padding: 30px; 
+            overflow-y: auto; 
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Drží všechny boxy krásně uprostřed */
+        }
+        .view-section { 
+            display: none; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+            width: 100%; 
+            max-width: 1100px; /* Sjednocená velikost pro VŠECHNY záložky */
+            box-sizing: border-box; 
+        }
         .view-section.active { display: block; }
         
         /* --- DLAŽDICE --- */
@@ -39,7 +55,7 @@
 
         /* --- STYLY PRVKŮ --- */
         h1, h2 { color: var(--gw2-red); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        input[type="text"], select { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        input[type="text"], select { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         
         .btn { background-color: var(--gw2-red); color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
         .btn:hover { background-color: #8a1515; }
@@ -47,19 +63,19 @@
         .btn-danger:hover { background-color: #444; }
         .btn-success { background-color: #4CAF50; }
         .btn-success:hover { background-color: #45a049; }
-        .btn-small { padding: 5px 10px; font-size: 12px; }
+        .btn-small { padding: 6px 12px; font-size: 12px; margin-bottom: 5px; width: 100%; box-sizing: border-box; } /* Tlačítka u předmětů na celou šířku buňky */
 
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
         /* --- TABULKA INVENTÁŘE --- */
-        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
-        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; position: sticky; top: -30px; z-index: 5; }
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; } /* Posunování na mobilu */
+        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; min-width: 700px; }
+        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
         .inventory-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         .inventory-table tr:hover { background-color: #f9f9f9; }
         .td-icon { width: 40px; padding-right: 0 !important; }
         .td-icon img { width: 32px; height: 32px; border-radius: 4px; display: block; }
         
-        /* Barvy Rarity v tabulce */
         .rarity-Junk { color: #888; font-weight: bold; }
         .rarity-Basic { color: #000; font-weight: bold; }
         .rarity-Fine { color: #2196F3; font-weight: bold; }
@@ -69,7 +85,49 @@
         .rarity-Ascended { color: #E91E63; font-weight: bold; }
         .rarity-Legendary { color: #9C27B0; font-weight: bold; }
 
-        .wiki-result { margin-top: 5px; font-size: 12px; background: #eef; padding: 8px; border-radius: 4px; display: none; color: #333; }
+        /* =========================================
+           MOBILNÍ ZOBRAZENÍ (Přizpůsobení PWA appce)
+           ========================================= */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            
+            /* Levé menu se stane spodní navigační lištou */
+            #sidebar {
+                width: 100% !important;
+                height: 65px;
+                flex-direction: row;
+                justify-content: space-around;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                z-index: 1000;
+            }
+            #toggle-btn { display: none; } /* Skryje tlačítko skládání */
+            
+            #sidebar button {
+                flex: 1;
+                flex-direction: column;
+                justify-content: center;
+                padding: 8px 0;
+                border-left: none;
+                border-top: 4px solid transparent;
+            }
+            #sidebar button:hover, #sidebar button.active {
+                border-left: none;
+                border-top-color: var(--gw2-red);
+            }
+            
+            .nav-icon { min-width: auto; font-size: 20px; margin-bottom: 4px; }
+            /* Vynucené zobrazení textu menu na mobilech */
+            #sidebar .nav-text { display: block; font-size: 11px; opacity: 1 !important; pointer-events: auto !important; }
+            
+            /* Úprava hlavní oblasti, aby ji nepřekrývala spodní lišta */
+            main { padding: 15px; margin-bottom: 65px; }
+            .view-section { padding: 20px 15px; }
+            
+            .controls-panel { flex-direction: column; align-items: stretch; }
+            .controls-panel input, .controls-panel select, .controls-panel button { width: 100%; max-width: none; margin-top: 5px;}
+        }
     </style>
 </head>
 <body>
@@ -90,6 +148,7 @@
     </nav>
     
     <main>
+        <!-- 1. Úvodní stránka -->
         <div id="view-home" class="view-section active">
             <h1>Guild Wars 2 Rozcestník</h1>
             <p style="color: #666; font-size: 1.1rem;">Vítej zpět! Co chceš dnes spravovat?</p>
@@ -112,10 +171,11 @@
             </div>
         </div>
         
-        <div id="view-inventory" class="view-section" style="max-width: 1200px;">
+        <!-- 2. Inventář -->
+        <div id="view-inventory" class="view-section">
             <h2>Inventář postav</h2>
             <label for="charSelect"><strong>Vyber postavu:</strong></label><br>
-            <select id="charSelect" onchange="loadCharacterInventory()" style="max-width: 350px;">
+            <select id="charSelect" onchange="loadCharacterInventory()" style="max-width: 350px; width: 100%;">
                 <option value="">-- Nejdříve uložte API klíč --</option>
             </select>
             
@@ -140,17 +200,20 @@
             </div>
         </div>
         
+        <!-- 3. Nastavení -->
         <div id="view-settings" class="view-section">
             <h2>Nastavení aplikace</h2>
             <label for="apiKey"><strong>GW2 API Klíč:</strong></label><br>
-            <input type="text" id="apiKey" placeholder="Zadej svůj klíč..." style="max-width: 350px;"><br><br>
+            <input type="text" id="apiKey" placeholder="Zadej svůj klíč..." style="max-width: 350px; width: 100%;"><br><br>
             <button class="btn" onclick="saveKey()">Uložit API klíč</button>
             <button class="btn btn-danger" onclick="deleteKey()">Smazat klíč</button>
-            <span id="saveStatus" style="color: green; display: none; margin-left: 10px; font-weight: bold;">✔ Úspěšně uloženo!</span>
+            <br>
+            <span id="saveStatus" style="color: green; display: none; margin-top: 10px; font-weight: bold; display: inline-block;">✔ Úspěšně uloženo!</span>
             <p><small style="color: #666;">Poznámka: API klíč se ukládá pouze do paměti tohoto prohlížeče.</small></p>
         </div>
     </main>
 
-    <script src="app.js?v=3"></script>
+    <!-- Cache Busting parametr ?v=7 donutí prohlížeč načíst nový soubor -->
+    <script src="app.js?v=7"></script>
 </body>
 </html>
