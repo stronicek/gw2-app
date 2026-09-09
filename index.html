@@ -1,289 +1,274 @@
-<!DOCTYPE html>
-<html lang="cs">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GW2 Správce Inventáře</title>
-    <style>
-        :root { 
-            --gw2-red: #b21e1e; 
-            --bg-dark: #1a1a1a; 
-            --bg-light: #f4f4f4; 
-            --border-color: #e0e0e0;
-        }
-        
-        body { margin: 0; display: flex; height: 100vh; font-family: Arial, sans-serif; background-color: var(--bg-light); overflow: hidden; }
-        
-        /* --- LEVÉ MENU (PC) --- */
-        #sidebar { background-color: var(--bg-dark); color: white; width: 220px; transition: width 0.3s ease; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.2); z-index: 10; }
-        #sidebar.collapsed { width: 60px; }
-        #sidebar button { background: none; border: none; color: #ccc; padding: 15px 0; text-align: left; font-size: 16px; cursor: pointer; display: flex; align-items: center; white-space: nowrap; border-left: 4px solid transparent; transition: 0.2s; }
-        #sidebar button:hover, #sidebar button.active { background-color: #333; color: white; border-left-color: var(--gw2-red); }
-        .nav-icon { min-width: 60px; text-align: center; font-size: 20px; }
-        .nav-text { transition: opacity 0.2s; }
-        #sidebar.collapsed .nav-text { opacity: 0; pointer-events: none; }
-        #toggle-btn { background-color: #000 !important; border-bottom: 1px solid #333; border-left: none !important; justify-content: flex-start; }
+let currentInventoryData = [];
 
-        /* --- HLAVNÍ OBSAH A BOXY --- */
-        main { 
-            flex: 1; 
-            padding: 30px; 
-            overflow-y: auto; 
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .view-section { 
-            display: none; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-            width: 100%; 
-            max-width: 1100px;
-            box-sizing: border-box; 
-        }
-        .view-section.active { display: block; }
-        
-        /* --- DLAŽDICE (Domovská stránka) --- */
-        .dashboard-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 30px; }
-        .tile { background: white; border: 1px solid #ddd; border-top: 4px solid var(--gw2-red); border-radius: 8px; padding: 30px 20px; text-align: center; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-        .tile:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); background: #fafafa; }
-        .tile-icon { font-size: 45px; margin-bottom: 10px; }
-        .tile-title { font-size: 1.2rem; font-weight: bold; color: #333; margin-bottom: 10px; }
-        .tile-desc { font-size: 0.9rem; color: #666; }
+window.onload = () => {
+    const savedKey = localStorage.getItem('gw2_api_key');
+    if (savedKey) {
+        document.getElementById('apiKey').value = savedKey;
+        loadCharacterList(savedKey);
+    }
+};
 
-        /* --- STYLY PRVKŮ --- */
-        h1, h2 { color: var(--gw2-red); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        input[type="text"], select { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        
-        .btn { background-color: var(--gw2-red); color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 6px; font-weight: bold; box-sizing: border-box; transition: 0.2s; }
-        .btn:hover { background-color: #8a1515; }
-        .btn-danger { background-color: #666; }
-        .btn-danger:hover { background-color: #444; }
-        .btn-success { background-color: #4CAF50; }
-        .btn-success:hover { background-color: #45a049; }
-        
-        .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+function toggleMenu() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+}
 
-        /* --- STYLY PRO TLAČÍTKA U PŘEDMĚTŮ --- */
-        .btn-small { 
-            padding: 8px 12px; 
-            font-size: 13px; 
-            display: inline-block; 
-            border-radius: 6px; 
-            box-sizing: border-box; 
-            border: none; 
-            color: white; 
-            cursor: pointer; 
-            text-decoration: none; 
-            font-family: inherit;
-        }
-        .btn-wiki { background-color: var(--gw2-red); text-align: center; }
-        .btn-gemini { background-color: #1a73e8; }
-        .btn-google { background-color: #333; }
-        .btn-small:hover { filter: brightness(1.2); }
-        .action-buttons { display: flex; flex-direction: column; gap: 6px; }
-
-        /* --- TABULKA INVENTÁŘE (Základ pro PC) --- */
-        .table-responsive { width: 100%; }
-        .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; text-align: left; }
-        .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
-        .inventory-table td { padding: 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-        .inventory-table tr:hover { background-color: #f9f9f9; }
-        
-        .td-icon { width: 48px; padding-right: 0 !important; }
-        .td-icon img { width: 40px; height: 40px; border-radius: 6px; display: block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Barvy Rarity */
-        .rarity-Junk { color: #888; font-weight: bold; }
-        .rarity-Basic { color: #000; font-weight: bold; }
-        .rarity-Fine { color: #2196F3; font-weight: bold; }
-        .rarity-Masterwork { color: #4CAF50; font-weight: bold; }
-        .rarity-Rare { color: #FBC02D; font-weight: bold; }
-        .rarity-Exotic { color: #FF9800; font-weight: bold; }
-        .rarity-Ascended { color: #E91E63; font-weight: bold; }
-        .rarity-Legendary { color: #9C27B0; font-weight: bold; }
-
-        /* =========================================
-           MOBILNÍ ZOBRAZENÍ (Aplikace moderních karet)
-           ========================================= */
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            
-            /* --- Spodní navigace --- */
-            #sidebar {
-                width: 100% !important;
-                height: 65px;
-                flex-direction: row;
-                justify-content: space-around;
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                z-index: 1000;
-                box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            }
-            #toggle-btn { display: none !important; } /* Tlačítko skrýt menu zmizí */
-            
-            #sidebar button {
-                flex: 1;
-                flex-direction: column;
-                justify-content: center;
-                padding: 6px 0;
-                border-left: none;
-                border-top: 3px solid transparent;
-            }
-            #sidebar button:hover, #sidebar button.active { border-left: none; border-top-color: var(--gw2-red); background-color: #222; }
-            .nav-icon { min-width: auto; font-size: 20px; margin-bottom: 2px; }
-            #sidebar .nav-text { display: block; font-size: 11px; opacity: 1 !important; pointer-events: auto !important; }
-            
-            main { padding: 10px; margin-bottom: 65px; }
-            .view-section { padding: 15px; border-radius: 12px; }
-            
-            .controls-panel { flex-direction: column; align-items: stretch; border: none; padding: 0; background: transparent; }
-            .controls-panel input, .controls-panel select, .controls-panel button { width: 100%; max-width: none; margin-top: 8px; padding: 12px; }
-            
-            /* --- Proměna tabulky na MOBILNÍ KARTY --- */
-            .inventory-table, .inventory-table tbody { display: block; width: 100%; }
-            .inventory-table thead { display: none; } /* Zmizí hlavička */
-            
-            .inventory-table tr {
-                display: grid;
-                grid-template-columns: 55px 1fr;
-                grid-template-areas: 
-                    "icon name"
-                    "icon details"
-                    "advice advice"
-                    "actions actions";
-                gap: 2px 12px;
-                margin-bottom: 16px;
-                border: 1px solid #f0f0f0;
-                border-radius: 16px; /* Kulaté rohy jako v appkách */
-                padding: 16px;
-                background: #ffffff;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-            }
-            .inventory-table td { border: none; padding: 0; display: block; width: 100%; box-sizing: border-box; }
-            
-            /* Mřížka karty */
-            .td-icon { grid-area: icon; }
-            .td-icon img { width: 55px; height: 55px; border-radius: 10px; }
-            
-            .td-name { grid-area: name; align-self: end; }
-            .td-name strong { font-size: 1.15rem; color: #111; }
-            
-            .td-details { grid-area: details; align-self: start; font-size: 0.85rem; color: #666; margin-top: 2px; }
-            
-            .td-advice { 
-                grid-area: advice; 
-                margin-top: 12px; 
-                background: #f8fafd; 
-                border-left: 4px solid #1a73e8; 
-                border-radius: 0 8px 8px 0;
-                padding: 12px 15px; 
-                font-size: 0.95rem; 
-                color: #222 !important;
-                line-height: 1.4;
-            }
-            
-            .td-actions { grid-area: actions; margin-top: 15px; }
-            .action-buttons { gap: 8px; }
-            
-            .btn-small { 
-                padding: 12px; 
-                font-size: 14px; 
-                font-weight: 600;
-                border-radius: 10px; /* Moderní velká tlačítka */
-                display: flex; 
-                justify-content: center; 
-                align-items: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <nav id="sidebar">
-        <!-- Tlačítko na PC menu sbalí, na mobilu zmizí -->
-        <button id="toggle-btn" onclick="toggleMenu()">
-            <span class="nav-icon">☰</span><span class="nav-text">Skrýt menu</span>
-        </button>
-        <button id="nav-home" class="nav-link active" onclick="switchView('home')">
-            <span class="nav-icon">🏠</span><span class="nav-text">Domů</span>
-        </button>
-        <button id="nav-inventory" class="nav-link" onclick="switchView('inventory')">
-            <span class="nav-icon">🎒</span><span class="nav-text">Inventář</span>
-        </button>
-        <button id="nav-settings" class="nav-link" onclick="switchView('settings')">
-            <span class="nav-icon">⚙️</span><span class="nav-text">Nastavení</span>
-        </button>
-    </nav>
+function switchView(viewId) {
+    document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+    document.getElementById('view-' + viewId).classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
     
-    <main>
-        <div id="view-home" class="view-section active">
-            <h1>Guild Wars 2 Rozcestník</h1>
-            <p style="color: #666; font-size: 1.1rem;">Vítej zpět! Co chceš dnes spravovat?</p>
-            <div class="dashboard-tiles">
-                <div class="tile" onclick="switchView('inventory')">
-                    <div class="tile-icon">🎒</div>
-                    <div class="tile-title">Prohlédnout batohy</div>
-                    <div class="tile-desc">Zobraz inventář svých postav a zjisti detaily o předmětech.</div>
-                </div>
-                <div class="tile" onclick="switchView('settings')">
-                    <div class="tile-icon">⚙️</div>
-                    <div class="tile-title">Správa API klíče</div>
-                    <div class="tile-desc">Aktualizuj nebo smaž svůj přístupový klíč z ArenaNetu.</div>
-                </div>
-                <div class="tile" onclick="window.open('https://wiki.guildwars2.com/', '_blank')">
-                    <div class="tile-icon">📖</div>
-                    <div class="tile-title">Oficiální Wiki</div>
-                    <div class="tile-desc">Otevři si herní encyklopedii v novém okně.</div>
-                </div>
-            </div>
-        </div>
-        
-        <div id="view-inventory" class="view-section">
-            <h2>Inventář postav</h2>
-            <label for="charSelect"><strong>Vyber postavu:</strong></label><br>
-            <select id="charSelect" onchange="loadCharacterInventory()" style="max-width: 350px; width: 100%;">
-                <option value="">-- Nejdříve uložte API klíč --</option>
-            </select>
-            
-            <div id="inventory-controls" class="controls-panel" style="display: none;">
-                <input type="text" id="searchInput" placeholder="Hledat podle názvu..." onkeyup="renderInventory()" style="flex: 1; min-width: 150px;">
-                <select id="rarityFilter" onchange="renderInventory()" style="width: auto;">
-                    <option value="">-- Všechny rarity --</option>
-                    <option value="Junk">Junk</option>
-                    <option value="Basic">Basic</option>
-                    <option value="Fine">Fine</option>
-                    <option value="Masterwork">Masterwork</option>
-                    <option value="Rare">Rare</option>
-                    <option value="Exotic">Exotic</option>
-                    <option value="Ascended">Ascended</option>
-                    <option value="Legendary">Legendary</option>
-                </select>
-                <button class="btn btn-success" onclick="exportToCSV()">⬇ Export (CSV)</button>
-            </div>
-            
-            <div id="results" style="margin-top: 25px;">
-                <p style="color: #666;">Vyber postavu z rozbalovacího menu pro načtení batohů.</p>
-            </div>
-        </div>
-        
-        <div id="view-settings" class="view-section">
-            <h2>Nastavení aplikace</h2>
-            <label for="apiKey"><strong>GW2 API Klíč:</strong></label><br>
-            <input type="text" id="apiKey" placeholder="Zadej svůj klíč..." style="max-width: 350px; width: 100%;"><br><br>
-            <button class="btn" onclick="saveKey()">Uložit API klíč</button>
-            <button class="btn btn-danger" onclick="deleteKey()">Smazat klíč</button>
-            <br>
-            <span id="saveStatus" style="color: green; display: none; margin-top: 10px; font-weight: bold; display: inline-block;">✔ Úspěšně uloženo!</span>
-            <p><small style="color: #666;">Poznámka: API klíč se ukládá pouze do paměti tohoto prohlížeče.</small></p>
-        </div>
-    </main>
+    const activeNavBtn = document.getElementById('nav-' + viewId);
+    if(activeNavBtn) activeNavBtn.classList.add('active');
+}
 
-    <!-- Zvýšená verze pro smazání staré cache -->
-    <script src="app.js?v=11"></script>
-</body>
-</html>
+function saveKey() {
+    const newKey = document.getElementById('apiKey').value.trim();
+    if (newKey === "") return alert("Před uložením vložte klíč.");
+    
+    localStorage.setItem('gw2_api_key', newKey);
+    const statusMsg = document.getElementById('saveStatus');
+    statusMsg.style.display = 'inline-block';
+    setTimeout(() => { statusMsg.style.display = 'none'; }, 2000);
+    loadCharacterList(newKey);
+}
+
+function deleteKey() {
+    if (confirm("Opravdu chceš smazat API klíč?")) {
+        localStorage.removeItem('gw2_api_key');
+        document.getElementById('apiKey').value = '';
+        document.getElementById('charSelect').innerHTML = '<option value="">-- Nejdříve uložte API klíč --</option>';
+        document.getElementById('results').innerHTML = '<p style="color: #666;">Vyber postavu z menu pro načtení batohů.</p>';
+        document.getElementById('inventory-controls').style.display = 'none';
+        alert('Klíč byl smazán.');
+    }
+}
+
+async function loadCharacterList(apiKey) {
+    const select = document.getElementById('charSelect');
+    try {
+        const response = await fetch(`https://api.guildwars2.com/v2/characters?access_token=${apiKey}`);
+        if (!response.ok) throw new Error("Chyba API klíče");
+        const characters = await response.json();
+        
+        select.innerHTML = '<option value="">-- Zvolte postavu --</option>';
+        characters.forEach(charName => {
+            select.innerHTML += `<option value="${charName}">${charName}</option>`;
+        });
+    } catch (error) {
+        select.innerHTML = '<option value="">-- Chybný klíč --</option>';
+    }
+}
+
+async function loadCharacterInventory() {
+    const apiKey = localStorage.getItem('gw2_api_key');
+    const selectedChar = document.getElementById('charSelect').value;
+    const resultsDiv = document.getElementById('results');
+    const controlsDiv = document.getElementById('inventory-controls');
+
+    document.getElementById('searchInput').value = '';
+    document.getElementById('rarityFilter').value = '';
+
+    if (!selectedChar) {
+        controlsDiv.style.display = 'none';
+        return;
+    }
+    
+    controlsDiv.style.display = 'none';
+    resultsDiv.innerHTML = `<em>Načítám batohy pro postavu <strong>${selectedChar}</strong>...</em>`;
+
+    try {
+        const invResponse = await fetch(`https://api.guildwars2.com/v2/characters/${selectedChar}/inventory?access_token=${apiKey}`);
+        if (!invResponse.ok) throw new Error("Chyba při stahování inventáře.");
+        
+        const inventoryData = await invResponse.json();
+        let allItems = [];
+        
+        inventoryData.bags.forEach(bag => {
+            if (bag && bag.inventory) {
+                const validItems = bag.inventory.filter(item => item !== null);
+                allItems.push(...validItems);
+            }
+        });
+
+        if (allItems.length === 0) {
+            resultsDiv.innerHTML = "<p>Inventář je prázdný.</p>";
+            return;
+        }
+
+        const uniqueIds = [...new Set(allItems.map(item => item.id))].slice(0, 200);
+        const idsString = uniqueIds.join(',');
+        
+        const itemsResponse = await fetch(`https://api.guildwars2.com/v2/items?ids=${idsString}`);
+        if (!itemsResponse.ok) throw new Error("Chyba při načítání detailů předmětů.");
+        
+        const itemDetailsArray = await itemsResponse.json();
+        const itemDetailsMap = {};
+        itemDetailsArray.forEach(detail => {
+            itemDetailsMap[detail.id] = detail;
+        });
+
+        currentInventoryData = [];
+        allItems.forEach((itemData) => {
+            const details = itemDetailsMap[itemData.id];
+            if (details) {
+                currentInventoryData.push({
+                    id: details.id,
+                    name: details.name,
+                    count: itemData.count,
+                    type: details.type,
+                    rarity: details.rarity,
+                    icon: details.icon
+                });
+            }
+        });
+
+        if (currentInventoryData.length === 0) throw new Error("Předměty se nepodařilo spárovat s databází API.");
+
+        controlsDiv.style.display = 'flex';
+        renderInventory();
+
+    } catch (error) {
+        console.error(error);
+        resultsDiv.innerHTML = `<span style="color:red">Došlo k chybě: ${error.message}</span>`;
+    }
+}
+
+function getSmartAdvice(item) {
+    const name = item.name.toLowerCase();
+    if (item.type === "Junk") return "Vendor trash. Prodej u jakéhokoliv obchodníka přes tlačítko 'Sell Junk'.";
+    if (item.type === "CraftingMaterial") return "Materiál k výrobě. V inventáři klikni na ozubené kolečko a dej 'Deposit All Materials'.";
+    if (name.includes("unidentified gear")) {
+        if (item.rarity === "Rare") return "Klikni pravým -> 'Use All'. Získané žluté věci rozeber Master's nebo Mystic kitem kvůli Ectoplasmům.";
+        return "Klikni pravým -> 'Use All'. Získané věci rozeber obyčejným (Basic) kitem na suroviny.";
+    }
+    if (item.type === "Container") return "Dvojklikem rozbal a podívej se na loot uvnitř.";
+    if (item.type === "Consumable") return "Dočasný buff (jídlo/potion), teleport, nebo odemčení. Přečti si popisek a zkonzumuj, nebo prodej na Trading Postu.";
+    if (item.type === "UpgradeComponent") return "Vylepšení do zbroje/zbraně. Schovej si ho, nebo zkontroluj cenu na Trading Postu (často se dají dobře prodat).";
+    if (item.type === "Armor" || item.type === "Weapon") {
+        if (item.rarity === "Ascended" || item.rarity === "Legendary") return "Nejsilnější výbava! Určitě si to schovej v bance na později.";
+        if (item.rarity === "Exotic") return "Pokud to nevyužiješ, zkontroluj cenu na Trading Postu. Pokud je levná, rozeber ji.";
+        return "Rozeber příslušným Salvage kitem, abys získal suroviny a uvolnil místo.";
+    }
+    if (item.type === "Trophy") return "Často součást příběhu nebo sbírky (Collection). Pokud už je sbírka hotová, můžeš bezpečně zničit.";
+    return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
+}
+
+function askGeminiById(itemId) {
+    const item = currentInventoryData.find(i => i.id === itemId);
+    if (!item) return;
+
+    const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
+    const promptText = `[GW2app] Ahoj, mám v inventáři předmět "${item.name}".\n\nDodatečné informace:\n- Typ: ${item.type}\n- Rarita: ${item.rarity}\n- Wiki: ${wikiLink}\n\nMůžeš mi poradit, k čemu přesně slouží a co je pro mě nejvýhodnější s ním udělat?`;
+    
+    navigator.clipboard.writeText(promptText).then(() => {
+        alert("Rozšířený dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
+        window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
+    }).catch(err => {
+        alert("Prohlížeč zablokoval automatické kopírování. Otevírám tvého Gema, dotaz prosím napiš ručně.");
+        window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
+    });
+}
+
+function searchGoogleById(itemId) {
+    const item = currentInventoryData.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const queryText = `GW2 ${item.name} česky`;
+    const query = encodeURIComponent(queryText);
+    window.open(`https://www.google.com/search?q=${query}`, '_blank');
+}
+
+function renderInventory() {
+    const resultsDiv = document.getElementById('results');
+    
+    const searchInput = document.getElementById('searchInput');
+    const searchQuery = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const raritySelect = document.getElementById('rarityFilter');
+    const rarityFilter = raritySelect ? raritySelect.value : "";
+    
+    const filteredItems = currentInventoryData.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+        const matchesRarity = rarityFilter === "" || item.rarity === rarityFilter;
+        return matchesSearch && matchesRarity;
+    });
+
+    if (filteredItems.length === 0) {
+        resultsDiv.innerHTML = "<p style='color: #666; padding: 20px 0;'>Žádné předměty neodpovídají filtru.</p>";
+        return;
+    }
+
+    let tableHTML = `
+        <div class="table-responsive">
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th colspan="2">Předmět</th>
+                        <th>Typ & Rarita</th>
+                        <th>Co s tím (Chytrá rada)</th>
+                        <th>Více informací</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    filteredItems.forEach((item) => {
+        const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
+        const advice = getSmartAdvice(item);
+
+        tableHTML += `
+            <tr>
+                <td class="td-icon"><img src="${item.icon}" alt="icon"></td>
+                <td class="td-name">
+                    <strong>${item.name}</strong><br>
+                    <span style="color:#888; font-size:11px;">Množství: ${item.count}</span>
+                </td>
+                <td class="td-details">
+                    ${item.type} <span style="color:#ccc; margin:0 4px;">•</span> 
+                    <span class="rarity-${item.rarity}">${item.rarity}</span>
+                </td>
+                <td class="td-advice">
+                    💡 ${advice}
+                </td>
+                <td class="td-actions">
+                    <div class="actions-wrapper">
+                        <a href="${wikiLink}" target="_blank" class="btn-small btn-wiki">📖 <span class="hide-mobile">Otevřít na </span>Wiki</a>
+                        <button class="btn-small btn-gemini" onclick="askGeminiById(${item.id})">🤖 <span class="hide-mobile">Zeptat se </span>Gemini</button>
+                        <button class="btn-small btn-google" onclick="searchGoogleById(${item.id})">🔍 <span class="hide-mobile">Hledat na </span>Googlu</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `</tbody></table></div>`;
+    resultsDiv.innerHTML = tableHTML;
+}
+
+function exportToCSV() {
+    if (currentInventoryData.length === 0) return alert("Není co exportovat.");
+
+    const searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+    const rarityFilter = document.getElementById('rarityFilter').value;
+    
+    const filteredItems = currentInventoryData.filter(item => {
+        return item.name.toLowerCase().includes(searchQuery) && (rarityFilter === "" || item.rarity === rarityFilter);
+    });
+
+    let csvContent = "Název,Typ,Rarita,Množství\n";
+    filteredItems.forEach(item => {
+        let name = item.name.replace(/"/g, '""');
+        csvContent += `"${name}","${item.type}","${item.rarity}",${item.count}\n`;
+    });
+
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "gw2_inventar.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
