@@ -57,41 +57,19 @@
         h1, h2 { color: var(--gw2-red); margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
         input[type="text"], select { padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
         
-        .btn { background-color: var(--gw2-red); color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        .btn { background-color: var(--gw2-red); color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; box-sizing: border-box; }
         .btn:hover { background-color: #8a1515; }
         .btn-danger { background-color: #666; }
         .btn-danger:hover { background-color: #444; }
         .btn-success { background-color: #4CAF50; }
         .btn-success:hover { background-color: #45a049; }
+        
+        /* PC Zobrazení pro malá tlačítka v tabulce */
+        .btn-small { padding: 6px 10px; font-size: 12px; display: inline-block; border-radius: 4px; box-sizing: border-box; font-weight: normal;}
 
         .controls-panel { background: #fafafa; border: 1px solid #eee; padding: 15px; border-radius: 6px; margin: 20px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-        /* --- AKČNÍ TLAČÍTKA V TABULCE --- */
-        .action-buttons { display: flex; flex-direction: column; gap: 8px; }
-        .btn-action {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            width: 100%;
-            padding: 10px;
-            font-size: 13px;
-            font-weight: bold;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            box-sizing: border-box;
-            transition: filter 0.2s ease;
-            font-family: inherit;
-        }
-        .btn-action:hover { filter: brightness(1.2); }
-        .btn-wiki { background-color: var(--gw2-red); }
-        .btn-gemini { background-color: #1a73e8; }
-        .btn-google { background-color: #333333; }
-
-        /* --- TABULKA INVENTÁŘE (Základ pro PC) --- */
+        /* --- TABULKA INVENTÁŘE --- */
         .table-responsive { width: 100%; }
         .inventory-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; text-align: left; }
         .inventory-table th { background-color: var(--bg-dark); color: white; padding: 12px; }
@@ -176,6 +154,19 @@
             .td-actions { grid-area: actions; border-top: 1px solid #eee; padding-top: 12px !important; margin-top: 5px;}
             
             .mobile-label { display: inline-block; font-weight: bold; color: #666; margin-right: 5px; min-width: 55px; }
+            
+            /* Optimalizace tlačítek pro mobil (zvětšení, zarovnání, mezery) */
+            .btn-small { 
+                padding: 10px; 
+                font-size: 13px; 
+                font-weight: bold;
+                width: 100%; 
+                display: flex !important; 
+                justify-content: center; 
+                align-items: center;
+                border-radius: 6px;
+            }
+            .td-actions div { gap: 8px !important; }
         }
     </style>
 </head>
@@ -259,6 +250,6 @@
         </div>
     </main>
 
-    <script src="app.js?v=9"></script>
+    <script src="app.js?v=10"></script>
 </body>
 </html>
