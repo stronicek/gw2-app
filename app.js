@@ -33,11 +33,11 @@ function saveKey() {
 }
 
 function deleteKey() {
-    if (confirm("Opravdu chceš smazat API klíč?")) {
+    if (confirm("Opravdu chceš smazat API klíč z tohoto prohlížeče?")) {
         localStorage.removeItem('gw2_api_key');
         document.getElementById('apiKey').value = '';
         document.getElementById('charSelect').innerHTML = '<option value="">-- Nejdříve uložte API klíč --</option>';
-        document.getElementById('results').innerHTML = '<p style="color: #666;">Vyber postavu z menu pro načtení batohů.</p>';
+        document.getElementById('results').innerHTML = '<p style="color: #666;">Vyber postavu z rozbalovacího menu pro načtení batohů.</p>';
         document.getElementById('inventory-controls').style.display = 'none';
         alert('Klíč byl smazán.');
     }
@@ -159,27 +159,31 @@ function getSmartAdvice(item) {
     return "Neznámý předmět. Podívej se na Wiki nebo se zeptej Gemini.";
 }
 
-// PROPOJENÍ S GEMINI - NOVĚ S ROZŠÍŘENÝM PROMPTEM
-function askGemini(itemName, itemType, itemRarity) {
-    const wikiLink = `https://wiki.guildwars2.com/wiki/${itemName.replace(/ /g, '_')}`;
+// 1. NOVÁ FUNKCE PRO GEMINI (S TAGEM A DETAILY)
+function askGeminiById(itemId) {
+    const item = currentInventoryData.find(i => i.id === itemId);
+    if (!item) return;
+
+    const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
     
-    // Rozšířený dotaz s parametry a tagem [GW2app]
-    const promptText = `[GW2app] Ahoj, mám v inventáři předmět "${itemName}".\n\nDodatečné informace:\n- Typ: ${itemType}\n- Rarita: ${itemRarity}\n- Wiki: ${wikiLink}\n\nMůžeš mi poradit, k čemu přesně slouží a co je pro mě nejvýhodnější s ním udělat?`;
+    // Zde je ten nový prompt s [GW2app]
+    const promptText = `[GW2app] Ahoj, mám v inventáři předmět "${item.name}".\n\nDodatečné informace:\n- Typ: ${item.type}\n- Rarita: ${item.rarity}\n- Wiki: ${wikiLink}\n\nMůžeš mi poradit, k čemu přesně slouží a co je pro mě nejvýhodnější s ním udělat?`;
     
     navigator.clipboard.writeText(promptText).then(() => {
         alert("Rozšířený dotaz byl zkopírován do schránky!\n\nNyní se otevře tvůj osobní GW2 Gem. Klikni do textového pole, dej vložit (Ctrl + V) a odešli.");
         window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
     }).catch(err => {
-        console.error('Chyba při kopírování do schránky: ', err);
         alert("Prohlížeč zablokoval automatické kopírování. Otevírám tvého Gema, dotaz prosím napiš ručně.");
         window.open('https://gemini.google.com/gem/1obUwN6NIgpi1w7fIjSgv_TijKrPIS44K', '_blank');
     });
 }
 
-// NOVÁ FUNKCE PRO RYCHLÉ VYHLEDÁVÁNÍ NA GOOGLU
-function searchGoogle(itemName) {
-    // Přidá název hry do vyhledávání pro lepší výsledky
-    const query = encodeURIComponent(`"Guild Wars 2" ${itemName}`);
+// 2. NOVÁ FUNKCE PRO GOOGLE
+function searchGoogleById(itemId) {
+    const item = currentInventoryData.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const query = encodeURIComponent(`"Guild Wars 2" ${item.name}`);
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
 }
 
@@ -216,13 +220,8 @@ function renderInventory() {
     `;
 
     filteredItems.forEach((item, index) => {
-        const wikiLink = `https://wiki.guildwars2.com/wiki/${item.name.replace(/ /g, '_')}`;
         const safeNameForFetch = encodeURIComponent(item.name);
-        
-        // Ošetření názvu pro JS funkce (aby nám apostrofy nerozbily kód)
-        const safeNameForJS = item.name.replace(/'/g, "\\'").replace(/"/g, "\\\""); 
         const wikiTextId = `wiki-response-${index}`;
-        
         const advice = getSmartAdvice(item);
 
         tableHTML += `
@@ -242,11 +241,11 @@ function renderInventory() {
                         
                         <button class="btn btn-small" onclick="getWikiSummary('${safeNameForFetch}', '${wikiTextId}')">📖 Zjistit z Wiki</button>
                         
-                        <!-- PŘIDÁNO: Rozšířené volání Gemini s typem a raritou -->
-                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGemini('${safeNameForJS}', '${item.type}', '${item.rarity}')">🤖 Zeptat se Gemini</button>
+                        <!-- TLAČÍTKO GEMINI -->
+                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGeminiById(${item.id})">🤖 Zeptat se Gemini</button>
                         
-                        <!-- NOVÉ TLAČÍTKO: Hledat na Googlu -->
-                        <button class="btn btn-small" style="background-color: #333;" onclick="searchGoogle('${safeNameForJS}')">🔍 Hledat na Googlu</button>
+                        <!-- TLAČÍTKO GOOGLE -->
+                        <button class="btn btn-small" style="background-color: #333;" onclick="searchGoogleById(${item.id})">🔍 Hledat na Googlu</button>
                         
                     </div>
                     <div id="${wikiTextId}" class="wiki-result"></div>
