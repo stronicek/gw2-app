@@ -27,7 +27,7 @@ function saveKey() {
     
     localStorage.setItem('gw2_api_key', newKey);
     const statusMsg = document.getElementById('saveStatus');
-    statusMsg.style.display = 'inline';
+    statusMsg.style.display = 'inline-block';
     setTimeout(() => { statusMsg.style.display = 'none'; }, 2000);
     loadCharacterList(newKey);
 }
@@ -169,14 +169,11 @@ function askGeminiById(itemId) {
     });
 }
 
-// NOVÝ FORMÁT VYHLEDÁVÁNÍ PRO GOOGLE
 function searchGoogleById(itemId) {
     const item = currentInventoryData.find(i => i.id === itemId);
     if (!item) return;
     
-    // Klíčová slova přesně podle zadání
     const queryText = `GW2 ${item.name} česky`;
-    
     const query = encodeURIComponent(queryText);
     window.open(`https://www.google.com/search?q=${query}`, '_blank');
 }
@@ -201,16 +198,17 @@ function renderInventory() {
     }
 
     let tableHTML = `
-        <table class="inventory-table">
-            <thead>
-                <tr>
-                    <th colspan="2">Předmět</th>
-                    <th>Typ & Rarita</th>
-                    <th>Co s tím (Chytrá rada)</th>
-                    <th>Více informací</th>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="table-responsive">
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th colspan="2">Předmět</th>
+                        <th>Typ & Rarita</th>
+                        <th>Co s tím (Chytrá rada)</th>
+                        <th>Více informací</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
 
     filteredItems.forEach((item) => {
@@ -220,30 +218,29 @@ function renderInventory() {
         tableHTML += `
             <tr>
                 <td class="td-icon"><img src="${item.icon}" alt="icon"></td>
-                <td>
+                <td class="td-name">
                     <strong>${item.name}</strong><br>
-                    <span style="color:#666; font-size:12px;">Množství: ${item.count}</span>
+                    <span style="color:#888; font-size:11px;">Množství: ${item.count}</span>
                 </td>
-                <td>
-                    ${item.type}<br>
+                <td class="td-details">
+                    ${item.type} <span style="color:#ccc; margin:0 4px;">•</span> 
                     <span class="rarity-${item.rarity}">${item.rarity}</span>
                 </td>
-                <td style="color: #1565C0; font-weight: 500; max-width: 250px;">💡 ${advice}</td>
-                <td style="max-width: 200px;">
-                    <div style="display: flex; flex-direction: column; gap: 5px;">
-                        
-                        <a href="${wikiLink}" target="_blank" class="btn btn-small" style="background-color: var(--gw2-red); text-align: center; text-decoration: none; display: block; box-sizing: border-box;">📖 Otevřít na Wiki</a>
-                        
-                        <button class="btn btn-small" style="background-color: #1a73e8;" onclick="askGeminiById(${item.id})">🤖 Zeptat se Gemini</button>
-                        <button class="btn btn-small" style="background-color: #333;" onclick="searchGoogleById(${item.id})">🔍 Hledat na Googlu</button>
-                        
+                <td class="td-advice">
+                    💡 ${advice}
+                </td>
+                <td class="td-actions">
+                    <div class="actions-wrapper">
+                        <a href="${wikiLink}" target="_blank" class="btn-small btn-wiki">📖 <span class="hide-mobile">Otevřít na </span>Wiki</a>
+                        <button class="btn-small btn-gemini" onclick="askGeminiById(${item.id})">🤖 <span class="hide-mobile">Zeptat se </span>Gemini</button>
+                        <button class="btn-small btn-google" onclick="searchGoogleById(${item.id})">🔍 <span class="hide-mobile">Hledat na </span>Googlu</button>
                     </div>
                 </td>
             </tr>
         `;
     });
 
-    tableHTML += `</tbody></table>`;
+    tableHTML += `</tbody></table></div>`;
     resultsDiv.innerHTML = tableHTML;
 }
 
